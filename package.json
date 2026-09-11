@@ -1,0 +1,13 @@
+{
+  "name": "simiclair-line-bot",
+  "version": "1.0.0",
+  "description": "シミクレール LINE公式アカウント自動応答ボット（ルールベース、AI API不使用）",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@line/bot-sdk": "^9.4.2",
+    "express": "^4.19.2"
+  }
+}
