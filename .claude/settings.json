@@ -9,5 +9,17 @@
   },
   "enabledPlugins": {
     "codex@openai-codex": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v codex >/dev/null 2>&1 && [ -n \"$OPENAI_API_KEY\" ] && ! codex login status >/dev/null 2>&1; then printenv OPENAI_API_KEY | codex login --with-api-key >/dev/null 2>&1; fi; exit 0"
+          }
+        ]
+      }
+    ]
   }
 }
