@@ -8,11 +8,20 @@
 //   5. 上記いずれにも一致しない場合のみ、簡易なフォールバック文を返す
 //
 // 医師・看護師へのエスカレーション経路は意図的に作っていない（05章の設計に準拠）。
-// 3・4は受付メッセージ（HOLD_MESSAGE）だけを自動で返し、回答そのものはしない。
-// LINE公式アカウントマネージャーの受信箱をスタッフが定期的に確認し、そこから直接返信する運用。
+// 3・4は受付メッセージだけを自動で返し、回答そのものはしない。
+// LINE公式アカウントマネージャーの受信箱をスタッフが確認し、そこから直接返信する運用。
+//
+// 人手を減らすための追加機能（2026年11月）:
+//   - 注文トラブルの受付文で、注文番号・名前・内容（破損・誤配送は写真）を最初にもらう
+//   - スタッフ対応に回る返信には、営業時間外なら「翌営業日以降のご連絡」の一文を添える
+//   - 健康被害の連絡が来たら、スタッフのLINEグループ等へすぐ通知する（STAFF_NOTIFY_TO）
+//   - リッチメニューのボタン文言には、決まった返信を返す（MENU_REPLIES）
+//   - 注文番号＋注文時のメールアドレス（または電話番号）が送られたら、Shopifyで配送状況を調べて返す
+//     （SHOPIFY_SHOP / SHOPIFY_CLIENT_ID / SHOPIFY_CLIENT_SECRET が設定されているときだけ動く）
 
 const line = require('@line/bot-sdk');
 const express = require('express');
+const holidayJp = require('@holiday-jp/holiday_jp');
 
 const config = {
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
@@ -36,6 +45,15 @@ const app = express();
 const HOLD_MESSAGE =
   'お問い合わせありがとうございます。担当スタッフより確認のうえ、順次ご連絡いたします。';
 
+// 注文トラブルの受付文：スタッフが聞き返さずに済むよう、必要な情報を最初にもらう
+const ORDER_TROUBLE_MESSAGE =
+  'お問い合わせありがとうございます。確認のため、ご注文番号・ご注文者のお名前・お困りの内容をこのトークにお送りください（破損・誤配送の場合は、商品の状態がわかる写真もあわせてお送りください）。\n' +
+  '担当スタッフより確認のうえ、順次ご連絡いたします。';
+
+// 配送状況の自動確認の案内（Shopify連携が設定されているときだけ添える）
+const ORDER_LOOKUP_GUIDE =
+  'ご注文済みの方は、ご注文番号とご注文時のメールアドレス（または電話番号）を1つのメッセージでお送りいただくと、配送状況を自動でお調べします。\n例：#1001 taro@example.com';
+
 const EFFICACY_TEMPLATE =
   '製品の効果や使用感には個人差があり、特定の症状や肌状態に合うかどうかについては断定的にお答えできません。\n' +
   '一般的な製品特徴は各商品ページをご確認ください。気になる症状がある場合や、妊娠・授乳中、肌が敏感な時期のご使用については、医師にご相談ください。';
@@ -48,6 +66,8 @@ const rules = [
       'かぶれ', '赤み', '赤く', '腫れ', 'かゆ', '痒', 'アレルギー', '湿疹',
       '痛', 'ヒリヒリ', 'ピリピリ', 'ひりひり', 'ヒリ', 'ひり', 'つっぱ', '赤い', '発疹', 'ほてり', 'ほてる', '荒れ', 'ただれ', 'ブツブツ', 'ぶつぶつ', '炎症', 'しみる', 'チクチク', 'ちくちく',
     ],
+    staff: true,
+    notify: true,
     handle: () => HOLD_MESSAGE,
   },
 
@@ -69,7 +89,8 @@ const rules = [
       '間違', '違う商品', '違うもの', '別の商品', '誤配送', 'キャンセル', '不良品', '足りない', '少な', '取り消', '取消', '変更', '変えたい', '入っていない', '入ってない', '入っていません', '届いていません', 'つぶれ', '潰れ', '凹', '追跡', '動いていない', '動いてない',
       'まだ来', '来ない', '来てない', '来ません', 'へこ', 'やめたい', '違うのが', '2個届', '二重', '重複',
     ],
-    handle: () => HOLD_MESSAGE,
+    staff: true,
+    handle: () => ORDER_TROUBLE_MESSAGE + (orderLookupEnabled() ? '\n\n' + ORDER_LOOKUP_GUIDE : ''),
   },
 
   // --- 効能・体質の質問：定型文でかわす（医師・カウンセラーへの取り次ぎはしない） ---
@@ -97,7 +118,8 @@ const rules = [
     keywords: ['何日', 'いつ届', '届くまで', '発送', '到着', '届きますか', '届く',
       '出荷', 'どのくらいで届', 'どれくらいで届', 'どのくらいで来', 'どれくらいで来', 'どのくらいで着', 'どれくらいで着', '間に合', '明日まで', 'までに届', 'までに欲し', '着きますか', 'いつ着', 'に着く'],
     handle: () =>
-      'ご入金（決済）の確認後、5営業日以内に発送いたします（土日祝・年末年始は休業日です）。発送時に追跡番号をメールでお知らせします。銀行振込の場合は、ご入金の確認後の発送となります。',
+      'ご入金（決済）の確認後、5営業日以内に発送いたします（土日祝・年末年始は休業日です）。発送時に追跡番号をメールでお知らせします。銀行振込の場合は、ご入金の確認後の発送となります。' +
+      (orderLookupEnabled() ? '\n' + ORDER_LOOKUP_GUIDE : ''),
   },
   {
     type: 'faq_payment',
@@ -162,12 +184,298 @@ function matchRule(text) {
 const FALLBACK_MESSAGE =
   'お問い合わせありがとうございます。内容を確認し、担当スタッフより順次ご連絡いたします。お急ぎの場合はお時間をいただく場合がございます。';
 
-function buildReply(userText) {
-  const rule = matchRule(userText);
-  if (!rule) {
-    return FALLBACK_MESSAGE;
+function ruleByType(type) {
+  return rules.find((r) => r.type === type);
+}
+
+// ---------------------------------------------------------------------------
+// 営業時間（平日10:00〜19:00、土日祝・年末年始は休業）
+// サーバーの時刻設定に関係なく、日本時間で判定する。
+// 年末年始の休業日は 12/29〜1/3 としている。変える場合は isYearEndHoliday を直す。
+// ---------------------------------------------------------------------------
+
+const BUSINESS_OPEN_HOUR = 10;
+const BUSINESS_CLOSE_HOUR = 19;
+
+const OUT_OF_HOURS_NOTE =
+  '※ただいま営業時間外のため、担当スタッフからのご連絡は翌営業日以降となります（営業時間：平日10:00〜19:00、土日祝・年末年始を除く）。';
+
+function jstParts(now) {
+  const j = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return {
+    y: j.getUTCFullYear(), m: j.getUTCMonth() + 1, d: j.getUTCDate(),
+    dow: j.getUTCDay(), h: j.getUTCHours(), min: j.getUTCMinutes(),
+  };
+}
+
+function isYearEndHoliday(m, d) {
+  return (m === 12 && d >= 29) || (m === 1 && d <= 3);
+}
+
+function isBusinessDay(p) {
+  if (p.dow === 0 || p.dow === 6) return false;
+  if (isYearEndHoliday(p.m, p.d)) return false;
+  // 日本時間の日付を文字列で渡す（Date を渡すとサーバーのタイムゾーンで日付がずれるおそれがある）
+  const ymd = `${p.y}-${String(p.m).padStart(2, '0')}-${String(p.d).padStart(2, '0')}`;
+  return !holidayJp.isHoliday(ymd);
+}
+
+function isBusinessHours(now) {
+  const p = jstParts(now);
+  return isBusinessDay(p) && p.h >= BUSINESS_OPEN_HOUR && p.h < BUSINESS_CLOSE_HOUR;
+}
+
+function formatJst(now) {
+  const p = jstParts(now);
+  return `${p.m}/${p.d} ${p.h}:${String(p.min).padStart(2, '0')}`;
+}
+
+// ---------------------------------------------------------------------------
+// リッチメニュー（トーク画面下のボタン）
+// ボタンを押すと、ここに書いた文言がお客様から送られる。文言はリッチメニューの設定と一字一句そろえること。
+// ---------------------------------------------------------------------------
+
+const MENU_REPLIES = {
+  '送料・お届けについて': () => ({
+    type: 'menu_shipping',
+    text: ruleByType('faq_shipping').handle() + '\n' + ruleByType('faq_delivery_time').handle(),
+  }),
+  'お支払い方法について': () => ({ type: 'menu_payment', text: ruleByType('faq_payment').handle() }),
+  '返品・交換について': () => ({ type: 'menu_return', text: ruleByType('faq_return').handle() }),
+  '専売品の購入方法': () => ({ type: 'menu_password', text: ruleByType('faq_password').handle() }),
+  'ご注文状況の確認': () => (orderLookupEnabled()
+    ? { type: 'menu_order_status', text: ORDER_LOOKUP_GUIDE.replace('ご注文済みの方は、', '') }
+    : { type: 'menu_order_status', staff: true,
+        text: 'ご注文番号とご注文者のお名前をこのトークにお送りください。担当スタッフより配送状況を確認のうえ、順次ご連絡いたします。' }),
+  'その他のお問い合わせ': () => ({
+    type: 'menu_contact', staff: true,
+    text: 'お問い合わせ内容をこのトークにお送りください。担当スタッフより確認のうえ、順次ご連絡いたします。',
+  }),
+};
+
+function matchMenu(text) {
+  const key = text.normalize('NFKC').trim();
+  for (const label of Object.keys(MENU_REPLIES)) {
+    if (label.normalize('NFKC') === key) return MENU_REPLIES[label]();
   }
-  return rule.handle(userText);
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// 配送状況の自動確認（Shopify）
+// 他人の注文が見えないよう、注文番号に加えて、注文時のメールアドレスか電話番号が一致したときだけ答える。
+// 見つからない場合と一致しない場合は同じ返信にする（どちらか分からないようにするため）。
+// メールアドレス・電話番号はログに出さない。
+// ---------------------------------------------------------------------------
+
+const SHOPIFY_SHOP = process.env.SHOPIFY_SHOP; // 例：ehhk60-bq（.myshopify.com の前の部分）
+const SHOPIFY_CLIENT_ID = process.env.SHOPIFY_CLIENT_ID;
+const SHOPIFY_CLIENT_SECRET = process.env.SHOPIFY_CLIENT_SECRET;
+const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION || '2026-10';
+
+function orderLookupEnabled() {
+  return Boolean(SHOPIFY_SHOP && SHOPIFY_CLIENT_ID && SHOPIFY_CLIENT_SECRET);
+}
+
+const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
+const PHONE_RE = /(?<![\d#])(?:\+?81[-\s]?|0)\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4}(?!\d)/;
+
+// 電話番号を「0から始まる国内の数字だけ」の形にそろえる（+81 90-1234-5678 → 09012345678）
+function normalizePhone(s) {
+  if (!s) return null;
+  let d = String(s).normalize('NFKC').replace(/\D/g, '');
+  if (d.startsWith('81') && (d.length === 11 || d.length === 12)) d = '0' + d.slice(2);
+  return d.length === 10 || d.length === 11 ? d : null;
+}
+
+// 「注文番号」と「メールアドレスまたは電話番号」が両方含まれているときだけ、確認の依頼とみなす
+function parseOrderLookup(text) {
+  let rest = text.normalize('NFKC');
+  const emailMatch = rest.match(EMAIL_RE);
+  const email = emailMatch ? emailMatch[0].toLowerCase() : null;
+  if (emailMatch) rest = rest.replace(emailMatch[0], ' ');
+  let phone = null;
+  const phoneMatch = rest.match(PHONE_RE);
+  if (phoneMatch) {
+    phone = normalizePhone(phoneMatch[0]);
+    if (phone) rest = rest.replace(phoneMatch[0], ' ');
+  }
+  const orderMatch = rest.match(/#\s?(\d{4,7})(?!\d)/) || rest.match(/(?<!\d)(\d{4,7})(?!\d)/);
+  if (!orderMatch || (!email && !phone)) return null;
+  return { orderNumber: orderMatch[1], email, phone };
+}
+
+let shopifyToken = null;
+let shopifyTokenExpiresAt = 0;
+
+// Dev Dashboard のアプリの client ID / secret から、24時間有効な読み取り用トークンを取得する（client credentials grant）
+async function getShopifyToken() {
+  if (shopifyToken && Date.now() < shopifyTokenExpiresAt - 60 * 1000) return shopifyToken;
+  const res = await fetch(`https://${SHOPIFY_SHOP}.myshopify.com/admin/oauth/access_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: SHOPIFY_CLIENT_ID,
+      client_secret: SHOPIFY_CLIENT_SECRET,
+    }),
+  });
+  if (!res.ok) throw new Error(`Shopify token request failed: ${res.status}`);
+  const body = await res.json();
+  shopifyToken = body.access_token;
+  shopifyTokenExpiresAt = Date.now() + body.expires_in * 1000;
+  return shopifyToken;
+}
+
+const ORDER_QUERY = `query ($q: String!) {
+  orders(first: 1, query: $q) {
+    nodes {
+      name email phone cancelledAt displayFinancialStatus displayFulfillmentStatus
+      shippingAddress { phone }
+      fulfillments(first: 5) { status trackingInfo(first: 3) { company number url } }
+    }
+  }
+}`;
+
+async function findOrderInShopify(orderNumber) {
+  const res = await fetch(`https://${SHOPIFY_SHOP}.myshopify.com/admin/api/${SHOPIFY_API_VERSION}/graphql.json`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': await getShopifyToken() },
+    body: JSON.stringify({ query: ORDER_QUERY, variables: { q: `name:${orderNumber}` } }),
+  });
+  if (!res.ok) throw new Error(`Shopify GraphQL request failed: ${res.status}`);
+  const body = await res.json();
+  if (body.errors && body.errors.length) throw new Error('Shopify GraphQL errors: ' + body.errors.map((e) => e.message).join('; '));
+  const order = body.data.orders.nodes[0];
+  // 検索は前方一致などで別の注文が返ることがあるため、注文番号が完全に一致するものだけ使う
+  return order && order.name === `#${orderNumber}` ? order : null;
+}
+
+function orderMatchesContact(order, { email, phone }) {
+  if (email && order.email && order.email.toLowerCase() === email) return true;
+  if (phone) {
+    const phones = [order.phone, order.shippingAddress && order.shippingAddress.phone].map(normalizePhone);
+    if (phones.includes(phone)) return true;
+  }
+  return false;
+}
+
+function describeOrder(order) {
+  const lines = [`ご注文 ${order.name} の状況をお知らせします。`];
+  if (order.cancelledAt) {
+    lines.push('このご注文はキャンセル済みです。');
+    return lines.join('\n');
+  }
+  const pay = order.displayFinancialStatus;
+  if (pay === 'PENDING') lines.push('お支払い：お振込みの確認待ちです。ご注文日から7日以内にお振込みください。');
+  else if (pay === 'REFUNDED') lines.push('お支払い：返金済みです。');
+  else if (pay === 'VOIDED' || pay === 'EXPIRED') lines.push('お支払い：お手続きが完了していません。');
+  else lines.push('お支払い：確認済みです。');
+
+  const ship = order.displayFulfillmentStatus;
+  const tracking = (order.fulfillments || [])
+    .flatMap((f) => f.trackingInfo || [])
+    .filter((t) => t && t.number);
+  if (ship === 'FULFILLED' || ship === 'PARTIALLY_FULFILLED') {
+    lines.push(ship === 'FULFILLED' ? '発送：発送済みです。' : '発送：一部の商品を発送済みです。残りの商品は準備ができ次第発送いたします。');
+    for (const t of tracking) {
+      lines.push(`配送会社：${t.company || '－'}／追跡番号：${t.number}`);
+      if (t.url) lines.push(`配送状況：${t.url}`);
+    }
+    if (!tracking.length) lines.push('追跡番号は発送完了のメールでご確認ください。');
+  } else if (pay === 'PENDING') {
+    lines.push('発送：お振込みの確認後、5営業日以内に発送いたします。');
+  } else {
+    lines.push('発送：準備中です。ご入金（決済）の確認後、5営業日以内に発送いたします（土日祝・年末年始は休業日です）。');
+  }
+  return lines.join('\n');
+}
+
+const ORDER_NOT_FOUND_MESSAGE =
+  'ご入力いただいたご注文番号と、メールアドレス（または電話番号）に一致するご注文が見つかりませんでした。ご注文時のメールアドレス・電話番号をご確認のうえ、もう一度お送りください。\n' +
+  'お困りの場合は、その旨をこのトークにお送りいただければ、担当スタッフよりご連絡いたします。';
+const ORDER_LOOKUP_ERROR_MESSAGE =
+  'ただいま配送状況を自動でお調べできませんでした。担当スタッフより確認のうえ、順次ご連絡いたします。';
+const ORDER_LOOKUP_LIMIT_MESSAGE =
+  '確認のご依頼が続いたため、自動でのお調べを一時的に止めています。担当スタッフより確認のうえ、順次ご連絡いたします。';
+
+// 同じ人からの確認は10分に5回まで（他人の注文を総当たりで探す使い方を防ぐ）
+const LOOKUP_LIMIT = 5;
+const LOOKUP_WINDOW_MS = 10 * 60 * 1000;
+const lookupHistory = new Map();
+
+function allowLookup(userId, now) {
+  const key = userId || 'unknown';
+  const recent = (lookupHistory.get(key) || []).filter((t) => now.getTime() - t < LOOKUP_WINDOW_MS);
+  if (recent.length >= LOOKUP_LIMIT) {
+    lookupHistory.set(key, recent);
+    return false;
+  }
+  recent.push(now.getTime());
+  lookupHistory.set(key, recent);
+  return true;
+}
+
+async function lookupOrder(req, ctx) {
+  if (!allowLookup(ctx.userId, ctx.now)) return { type: 'order_lookup_limited', staff: true, text: ORDER_LOOKUP_LIMIT_MESSAGE };
+  try {
+    const order = await (ctx.findOrder || findOrderInShopify)(req.orderNumber);
+    if (!order || !orderMatchesContact(order, req)) return { type: 'order_lookup_not_found', text: ORDER_NOT_FOUND_MESSAGE };
+    return { type: 'order_lookup', text: describeOrder(order) };
+  } catch (err) {
+    console.error('配送状況の確認に失敗しました:', err.message);
+    return { type: 'order_lookup_error', staff: true, text: ORDER_LOOKUP_ERROR_MESSAGE };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 返信の組み立て
+// ---------------------------------------------------------------------------
+
+// 配送状況の確認以外の返信を決める（同期処理）。
+function planReply(userText) {
+  const rule = matchRule(userText);
+  // 健康被害は何より先に扱う（メニューや注文確認の文言に混ざっていても見落とさない）
+  if (rule && rule.type === 'adverse_event') {
+    return { type: rule.type, staff: true, notify: true, text: rule.handle(userText) };
+  }
+  const menu = matchMenu(userText);
+  if (menu) return menu;
+  if (!rule) return { type: 'fallback', staff: true, text: FALLBACK_MESSAGE };
+  return { type: rule.type, staff: Boolean(rule.staff), notify: Boolean(rule.notify), text: rule.handle(userText) };
+}
+
+function withHoursNote(reply, now) {
+  if (reply.staff && !isBusinessHours(now)) return { ...reply, text: reply.text + '\n' + OUT_OF_HOURS_NOTE };
+  return reply;
+}
+
+// 1通のメッセージへの返信を決める。ctx: { now, userId, findOrder（試験用） }
+async function respond(userText, ctx = {}) {
+  const now = ctx.now || new Date();
+  let reply = planReply(userText);
+  if (reply.type !== 'adverse_event' && orderLookupEnabledFor(ctx)) {
+    const req = parseOrderLookup(userText);
+    if (req) {
+      const result = await lookupOrder(req, { ...ctx, now });
+      // 注文トラブルの連絡に注文番号が添えられていた場合は、状況を返したうえでスタッフ対応にも回す
+      if (reply.type === 'order_trouble') {
+        reply = { ...result, staff: true, text: result.text + '\n\nお問い合わせの内容は、担当スタッフより確認のうえ、順次ご連絡いたします。' };
+      } else {
+        reply = result;
+      }
+    }
+  }
+  return withHoursNote(reply, now);
+}
+
+function orderLookupEnabledFor(ctx) {
+  return Boolean(ctx.findOrder) || orderLookupEnabled();
+}
+
+// 試験・確認用：配送状況の確認を除いた返信の文面
+function buildReply(userText, now = new Date()) {
+  return withHoursNote(planReply(userText), now).text;
 }
 
 // ---------------------------------------------------------------------------
@@ -202,17 +510,65 @@ app.use((err, req, res, next) => {
   res.sendStatus(500);
 });
 
+// ---------------------------------------------------------------------------
+// スタッフへの通知（健康被害の連絡）
+// STAFF_NOTIFY_TO に、通知先のLINEグループID（Cから始まる）またはユーザーID（Uから始まる）を
+// カンマ区切りで設定する。未設定なら通知しない。
+// 健康に関わる内容のため、通知には本文を載せず「届いたこと」だけを知らせる。
+// LINEのプッシュメッセージは、公式アカウントの月間メッセージ数に含まれる。
+// ---------------------------------------------------------------------------
+
+const STAFF_NOTIFY_TO = (process.env.STAFF_NOTIFY_TO || '')
+  .split(',').map((s) => s.trim()).filter(Boolean);
+
+async function notifyStaff(now) {
+  if (!STAFF_NOTIFY_TO.length) return;
+  const text =
+    `【シミクレールLINE】健康被害の可能性がある連絡が届きました（${formatJst(now)}）。\n` +
+    'LINE公式アカウントマネージャーのチャットで内容を確認し、対応してください。';
+  for (const to of STAFF_NOTIFY_TO) {
+    try {
+      await client.pushMessage({ to, messages: [{ type: 'text', text }] });
+    } catch (err) {
+      console.error('スタッフへの通知に失敗しました:', err.message);
+    }
+  }
+}
+
 async function handleEvent(event) {
-  if (event.type !== 'message' || event.message.type !== 'text') {
+  // ボットがグループに招待されたら、通知先に設定するためのグループIDを知らせる
+  if (event.type === 'join' && event.source && (event.source.type === 'group' || event.source.type === 'room')) {
+    const id = event.source.groupId || event.source.roomId;
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{
+        type: 'text',
+        text: 'このグループに健康被害の連絡の通知を送るには、Renderの環境変数 STAFF_NOTIFY_TO に次のIDを設定してください。\n' + id,
+      }],
+    });
     return;
   }
 
-  const replyText = buildReply(event.message.text);
+  if (event.type !== 'message' || event.message.type !== 'text') {
+    return;
+  }
+  // スタッフのグループ内の会話には反応しない（お客様との1対1のトークだけに返信する）
+  if (!event.source || event.source.type !== 'user') {
+    return;
+  }
 
+  const now = new Date();
+  const reply = await respond(event.message.text, { now, userId: event.source.userId });
+
+  // 返信には期限があるため、通知より先に返信する
   await client.replyMessage({
     replyToken: event.replyToken,
-    messages: [{ type: 'text', text: replyText }],
+    messages: [{ type: 'text', text: reply.text }],
   });
+
+  if (reply.notify) {
+    await notifyStaff(now);
+  }
 }
 
 const PORT = process.env.PORT || 3000;
