@@ -66,6 +66,11 @@ LINE公式アカウントマネージャーの「リッチメニュー」→「�
 
 文言は `index.js` の `MENU_REPLIES` と一致している必要がある。画像を作り直すときは `richmenu/richmenu.html` を編集して書き出す。
 
+デザイン違いの画像（2026年11月作成）を `richmenu/themes/` に置いている。LANE RESERVE の8つのカラーテーマ
+（default 華やか／blush ピンクベージュ／calm 爽やか／seiji 青白磁とリネン／hakuji ホワイト／solemn 厳か／luxe ゴールド／natural シェル）ごとに、
+`stone-<テーマ>.jpg`（当院のメニュー画像を元にした石のタイル版）と `simple-<テーマ>.jpg`（シンプル版）がある。
+16枚ともボタンの並びは上の表と同じなので、画像を差し替えるだけでよい（2500×1686、各300KB未満）。
+
 ### 配送状況の自動確認の設定（Shopify）
 
 1. Shopifyの Dev Dashboard（dev.shopify.com）でアプリを作り、アクセス権に `read_orders` を選ぶ
