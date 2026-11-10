@@ -1,0 +1,170 @@
+[
+ {
+  "text": "送料はかかりますか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "北海道への送料はいくらでしょう",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "2万円買ったら送料はどうなりますか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "アメリカに住んでいますが注文できますか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "注文から到着までの日数を知りたい",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "明日までに欲しいのですが間に合いますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "いつごろ発送になりますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "土日も出荷してますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "どれくらいで手元に届きますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "クレジットカード以外の支払いはありますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "後払いできますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "代引きでお願いしたい",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "振り込み手数料はどちら負担ですか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "分割払いはできますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "定期コースはありますか",
+  "expect": "faq_subscription"
+ },
+ {
+  "text": "定期的に送ってもらえますか",
+  "expect": "faq_subscription"
+ },
+ {
+  "text": "開けてしまったけど返品できますか",
+  "expect": "faq_return"
+ },
+ {
+  "text": "合わなかったので返したいです",
+  "expect": "faq_return"
+ },
+ {
+  "text": "交換はできますか",
+  "expect": "faq_return"
+ },
+ {
+  "text": "どうやって使えばいいですか",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "朝も使っていいですか",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "美容液の量はどれくらいですか",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "パスワードがわかりません",
+  "expect": "faq_password"
+ },
+ {
+  "text": "ゼオスキンの購入方法を教えてください",
+  "expect": "faq_password"
+ },
+ {
+  "text": "カウンセリングを受けたいです",
+  "expect": "faq_password"
+ },
+ {
+  "text": "1週間たっても届きません",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "中身が漏れていました",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "注文内容を変えたいです",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "頼んだものと違うのが来ました",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "キャンセルできますか",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "顔がかゆくなってきました",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "使ってから肌が荒れてしまいました",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "ピリピリするんですが大丈夫ですか",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "シミに効きますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "ニキビ肌でも使えますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "どれが一番おすすめですか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "何歳から使えますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "在庫はありますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "ありがとうございました",
+  "expect": "fallback"
+ },
+ {
+  "text": "会員登録しないと買えませんか",
+  "expect": "fallback"
+ },
+ {
+  "text": "ポイントは貯まりますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "メルマガを止めたい",
+  "expect": "fallback"
+ }
+]

@@ -1,0 +1,182 @@
+[
+ {
+  "text": "ポイントカードはありますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "痛快なキャンペーンですね！",
+  "expect": "fallback"
+ },
+ {
+  "text": "リニューアルの変更点を教えて",
+  "expect": "fallback"
+ },
+ {
+  "text": "送料って無料になりますか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "配送料金はかかりますか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "いくら以上買えば送料タダですか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "沖縄でも送料同じですか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "海外に送ってもらえますか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "注文したらどのくらいで来ますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "今日頼んだら週末までに着きますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "出荷はいつ頃でしょうか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "お届け日の指定はできますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "クレカ使えますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "代金引換はできますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "ペイパルで払えますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "銀行に振り込む期限はいつまで？",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "領収書は出せますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "定期購入はできますか",
+  "expect": "faq_subscription"
+ },
+ {
+  "text": "毎月届けてもらうことはできますか",
+  "expect": "faq_subscription"
+ },
+ {
+  "text": "サブスクはありますか",
+  "expect": "faq_subscription"
+ },
+ {
+  "text": "未開封なら返せますか",
+  "expect": "faq_return"
+ },
+ {
+  "text": "肌に合わなかったら返金してもらえますか",
+  "expect": "faq_return"
+ },
+ {
+  "text": "イメージと違ったので送り返したい",
+  "expect": "faq_return"
+ },
+ {
+  "text": "塗る順番を教えて",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "1回にどれくらい使えばいいですか",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "化粧水の後に使うんですか",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "ゼオスキンはどうやったら買えますか",
+  "expect": "faq_password"
+ },
+ {
+  "text": "医療機関専売品の買い方を教えて",
+  "expect": "faq_password"
+ },
+ {
+  "text": "カートで止まってしまいます",
+  "expect": "faq_password"
+ },
+ {
+  "text": "注文した商品がまだ来ない",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "箱がへこんでいました",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "注文をやめたいです",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "住所を間違えて入力しました",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "同じものが2個届きました",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "使ったら顔が赤くなりました",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "塗ったところがチクチクします",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "目に入って痛い",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "ブツブツができました",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "これって美白効果ありますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "敏感肌でも使えますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "妊娠中ですが使っても大丈夫ですか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "ハイドロキノン入ってますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "営業時間は？",
+  "expect": "fallback"
+ },
+ {
+  "text": "電話で問い合わせたいです",
+  "expect": "fallback"
+ },
+ {
+  "text": "こんにちは",
+  "expect": "fallback"
+ }
+]

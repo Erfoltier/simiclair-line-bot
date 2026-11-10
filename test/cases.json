@@ -1,0 +1,750 @@
+[
+ {
+  "text": "送料はいくらですか？",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "送料無料になるのはいくらからですか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "注文してから何日で届きますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "いつ届きますか？",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "発送はいつになりますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "支払い方法を教えてください",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "銀行振込はできますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "コンビニ払いは使えますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "PayPayで払えますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "Apple Payは使えますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "振込先を教えてください",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "返品できますか？",
+  "expect": "faq_return"
+ },
+ {
+  "text": "肌に合わなかったので返品したいです",
+  "expect": "faq_return"
+ },
+ {
+  "text": "使い方を教えてください",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "美容液とクリームはどっちが先ですか",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "シミクレールのパスワードを教えてください",
+  "expect": "faq_password"
+ },
+ {
+  "text": "購入パスワードはどこでもらえますか",
+  "expect": "faq_password"
+ },
+ {
+  "text": "ゼオスキンを買いたいのですが診察が必要ですか",
+  "expect": "faq_password"
+ },
+ {
+  "text": "カウンセリングの予約をしたいです",
+  "expect": "faq_password"
+ },
+ {
+  "text": "パスワードが違うと言われて購入できません",
+  "expect": "faq_password"
+ },
+ {
+  "text": "シミクレールの営業時間は？",
+  "expect": "fallback"
+ },
+ {
+  "text": "シミクレールで買った商品について質問です",
+  "expect": "fallback"
+ },
+ {
+  "text": "ミラミンはシミに効きますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "ニキビに効く商品はありますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "敏感肌でも使えますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "妊娠中でも使えますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "どれくらいで効果が出ますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "使ったら顔が赤くなりました",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "かぶれてしまいました",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "ヒリヒリします",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "使ってから肌が荒れました",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "商品が届きません",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "注文した商品と違うものが届きました",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "容器が割れていました",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "注文をキャンセルしたいです",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "定期便はありますか",
+  "expect": "faq_subscription"
+ },
+ {
+  "text": "こんにちは",
+  "expect": "fallback"
+ },
+ {
+  "text": "領収書はもらえますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "送料っていくらかかりますか？",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "1万円分買ったら送料かかりますか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "北海道でも送料は同じですか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "今日注文したらいつ頃届きますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "最短で何日くらいで届く？",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "発送予定日を知りたいです",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "クレジットカード以外の支払いはありますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "ペイペイ使えますか？",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "代引きはできますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "後払いに対応していますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "振り込みの期限はいつまでですか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "ＪＣＢのカードは使えますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "開封済みでも返品できますか",
+  "expect": "faq_return"
+ },
+ {
+  "text": "商品の交換はできますか",
+  "expect": "faq_return"
+ },
+ {
+  "text": "使う順番を知りたいです",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "化粧水の前に使うものですか？",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "パスワードを間違えて入力してしまいました",
+  "expect": "faq_password"
+ },
+ {
+  "text": "パスワードを忘れました",
+  "expect": "faq_password"
+ },
+ {
+  "text": "診察を受けないと買えないんですか",
+  "expect": "faq_password"
+ },
+ {
+  "text": "ワカサプリが買えないです",
+  "expect": "faq_password"
+ },
+ {
+  "text": "カウンセリングはオンラインでも受けられますか",
+  "expect": "faq_password"
+ },
+ {
+  "text": "シワにも効きますか？",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "肝斑に使っても大丈夫？",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "授乳中でも使えますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "アトピーですが使えますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "毛穴の開きに良い商品はどれですか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "塗ったところがかゆいです",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "ピリピリして痛いです",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "顔が腫れてしまいました",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "ぶつぶつができました",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "まだ商品が届いていないのですが",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "中身が漏れていました",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "注文した数より少なかったです",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "注文を取り消したいです",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "お届け先の住所を変更したいです",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "定期購入はできますか",
+  "expect": "faq_subscription"
+ },
+ {
+  "text": "ありがとうございます",
+  "expect": "fallback"
+ },
+ {
+  "text": "シミクレールのお店はどこにありますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "ポイントはありますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "領収書を発行してほしいです",
+  "expect": "fallback"
+ },
+ {
+  "text": "送料無料ラインはありますか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "配送料を教えて",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "注文後どのくらいで発送されますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "土日も発送してますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "明日までに届きますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "分割払いはできますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "銀行の口座番号を教えてください",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "Google Payで買えますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "コンビニで払いたいです",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "肌に合わなかったら返品できますか",
+  "expect": "faq_return"
+ },
+ {
+  "text": "未使用なら返せますか",
+  "expect": "faq_return"
+ },
+ {
+  "text": "朝と夜どちらに使えばいいですか",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "1回の使用量はどれくらいですか",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "購入用のパスワードはどうやって手に入りますか",
+  "expect": "faq_password"
+ },
+ {
+  "text": "医師の診察なしでは買えませんか",
+  "expect": "faq_password"
+ },
+ {
+  "text": "ゼオスキンをカートに入れたら先に進めません",
+  "expect": "faq_password"
+ },
+ {
+  "text": "そばかすに効果ありますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "ニキビ跡が気になっています",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "どの美容液がおすすめですか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "使用後に肌がつっぱってヒリつきます",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "目の周りが赤いです",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "発疹が出ました",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "追跡番号を見ても動いていません",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "箱がつぶれて届きました",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "2個注文したのに1個しか入っていません",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "注文内容を変えたいです",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "定期便の申し込み方法を教えて",
+  "expect": "faq_subscription"
+ },
+ {
+  "text": "お世話になっております",
+  "expect": "fallback"
+ },
+ {
+  "text": "ギフト包装はできますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "会員登録は必要ですか",
+  "expect": "fallback"
+ },
+ {
+  "text": "ポイントカードはありますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "痛快なキャンペーンですね！",
+  "expect": "fallback"
+ },
+ {
+  "text": "リニューアルの変更点を教えて",
+  "expect": "fallback"
+ },
+ {
+  "text": "送料って無料になりますか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "配送料金はかかりますか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "いくら以上買えば送料タダですか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "沖縄でも送料同じですか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "海外に送ってもらえますか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "注文したらどのくらいで来ますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "今日頼んだら週末までに着きますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "出荷はいつ頃でしょうか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "お届け日の指定はできますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "クレカ使えますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "代金引換はできますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "ペイパルで払えますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "銀行に振り込む期限はいつまで？",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "領収書は出せますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "毎月届けてもらうことはできますか",
+  "expect": "faq_subscription"
+ },
+ {
+  "text": "サブスクはありますか",
+  "expect": "faq_subscription"
+ },
+ {
+  "text": "未開封なら返せますか",
+  "expect": "faq_return"
+ },
+ {
+  "text": "肌に合わなかったら返金してもらえますか",
+  "expect": "faq_return"
+ },
+ {
+  "text": "イメージと違ったので送り返したい",
+  "expect": "faq_return"
+ },
+ {
+  "text": "塗る順番を教えて",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "1回にどれくらい使えばいいですか",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "化粧水の後に使うんですか",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "ゼオスキンはどうやったら買えますか",
+  "expect": "faq_password"
+ },
+ {
+  "text": "医療機関専売品の買い方を教えて",
+  "expect": "faq_password"
+ },
+ {
+  "text": "カートで止まってしまいます",
+  "expect": "faq_password"
+ },
+ {
+  "text": "注文した商品がまだ来ない",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "箱がへこんでいました",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "注文をやめたいです",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "住所を間違えて入力しました",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "同じものが2個届きました",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "塗ったところがチクチクします",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "目に入って痛い",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "ブツブツができました",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "これって美白効果ありますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "妊娠中ですが使っても大丈夫ですか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "ハイドロキノン入ってますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "営業時間は？",
+  "expect": "fallback"
+ },
+ {
+  "text": "電話で問い合わせたいです",
+  "expect": "fallback"
+ },
+ {
+  "text": "送料はかかりますか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "北海道への送料はいくらでしょう",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "2万円買ったら送料はどうなりますか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "アメリカに住んでいますが注文できますか",
+  "expect": "faq_shipping"
+ },
+ {
+  "text": "注文から到着までの日数を知りたい",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "明日までに欲しいのですが間に合いますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "いつごろ発送になりますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "土日も出荷してますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "どれくらいで手元に届きますか",
+  "expect": "faq_delivery_time"
+ },
+ {
+  "text": "後払いできますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "代引きでお願いしたい",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "振り込み手数料はどちら負担ですか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "定期コースはありますか",
+  "expect": "faq_subscription"
+ },
+ {
+  "text": "定期的に送ってもらえますか",
+  "expect": "faq_subscription"
+ },
+ {
+  "text": "開けてしまったけど返品できますか",
+  "expect": "faq_return"
+ },
+ {
+  "text": "合わなかったので返したいです",
+  "expect": "faq_return"
+ },
+ {
+  "text": "交換はできますか",
+  "expect": "faq_return"
+ },
+ {
+  "text": "どうやって使えばいいですか",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "朝も使っていいですか",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "美容液の量はどれくらいですか",
+  "expect": "faq_howto"
+ },
+ {
+  "text": "パスワードがわかりません",
+  "expect": "faq_password"
+ },
+ {
+  "text": "ゼオスキンの購入方法を教えてください",
+  "expect": "faq_password"
+ },
+ {
+  "text": "カウンセリングを受けたいです",
+  "expect": "faq_password"
+ },
+ {
+  "text": "1週間たっても届きません",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "頼んだものと違うのが来ました",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "キャンセルできますか",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "顔がかゆくなってきました",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "使ってから肌が荒れてしまいました",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "ピリピリするんですが大丈夫ですか",
+  "expect": "adverse_event"
+ },
+ {
+  "text": "シミに効きますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "ニキビ肌でも使えますか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "どれが一番おすすめですか",
+  "expect": "efficacy_question"
+ },
+ {
+  "text": "何歳から使えますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "在庫はありますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "ありがとうございました",
+  "expect": "fallback"
+ },
+ {
+  "text": "会員登録しないと買えませんか",
+  "expect": "fallback"
+ },
+ {
+  "text": "ポイントは貯まりますか",
+  "expect": "fallback"
+ },
+ {
+  "text": "メルマガを止めたい",
+  "expect": "fallback"
+ }
+]
