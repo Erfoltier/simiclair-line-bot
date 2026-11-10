@@ -171,6 +171,16 @@ function check(name, ok, detail = '') {
   two = await bot.respond('#1001 届かないです', { now: onHours, userId: 'Utr', findOrder });
   check('「#1001 届かない」：受付文に連絡先のお願いを添える（スタッフ対応のまま）', two.type === 'order_trouble' && two.staff && two.text.includes('ご注文 #1001 の配送状況をお調べします'), two.text);
   check('金額（15000円）を注文番号と取り違えない', (await bot.respond('15000円以上で送料無料ですか', { now: onHours, userId: 'Uyen', findOrder })).type === 'faq_shipping');
+  // 再送で届く順番が入れ替わった場合：送った時刻（sentAt）で前後を判断する
+  const t0 = onHours.getTime();
+  two = await bot.respond('taro@example.com', { now: onHours, userId: 'Uorder', findOrder, sentAt: t0 + 60000 });
+  await bot.respond('#1001', { now: onHours, userId: 'Uorder', findOrder, sentAt: t0 + 120000 });
+  check('注文番号より前に送られた連絡先（あとから届いた）とは組み合わせない', two.type === 'order_need_number', two.type);
+  await bot.respond('#1001', { now: onHours, userId: 'Uorder2', findOrder, sentAt: t0 + 120000 });
+  two = await bot.respond('taro@example.com', { now: onHours, userId: 'Uorder2', findOrder, sentAt: t0 + 60000 });
+  check('番号より前の時刻の連絡先には使わない（番号は覚えたまま）', two.type === 'order_need_number', two.type);
+  two = await bot.respond('taro@example.com', { now: onHours, userId: 'Uorder2', findOrder, sentAt: t0 + 180000 });
+  check('そのあと番号より後に送られた連絡先なら調べる', two.type === 'order_lookup', two.type);
   check('数字だけ「1001」も注文番号とみなす', (await bot.respond('1001', { now: onHours, userId: 'Unum', findOrder })).type === 'order_need_contact');
 
   // --- 追跡ページ ---
@@ -217,6 +227,16 @@ function check(name, ok, detail = '') {
   await notifyBot.handleEvent({ type: 'join', replyToken: 'rt2', source: { type: 'group', groupId: 'Cnewgroup' } });
   const joinReply = notifyBot.sent.replies[notifyBot.sent.replies.length - 1].messages[0].text;
   check('グループに招待されたら、通知先に設定するIDを知らせる', joinReply.includes('Cnewgroup') && joinReply.includes('STAFF_NOTIFY_TO'));
+
+  // --- Webhookの再送：同じイベントが2回届いても1回だけ処理する ---
+  const dupBot = loadBot({ STAFF_NOTIFY_TO: 'Cstaff' });
+  const dupEv = { ...ev('顔が赤くなりました'), webhookEventId: '01HXYZDUP', timestamp: Date.now() };
+  await dupBot.handleEvent(dupEv);
+  await dupBot.handleEvent({ ...dupEv, deliveryContext: { isRedelivery: true } });
+  check('同じイベントIDが2回届いても、返信も通知も1回だけ', dupBot.sent.replies.length === 1 && dupBot.sent.pushes.length === 1,
+    `replies=${dupBot.sent.replies.length} pushes=${dupBot.sent.pushes.length}`);
+  await dupBot.handleEvent({ ...ev('送料はいくらですか'), webhookEventId: '01HXYZOTHER', timestamp: Date.now() });
+  check('別のイベントIDなら、ふつうに返信する', dupBot.sent.replies.length === 2);
 
   const silentBot = loadBot();
   await silentBot.handleEvent(ev('顔が赤くなりました'));
