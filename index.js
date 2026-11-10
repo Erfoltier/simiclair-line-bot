@@ -131,6 +131,24 @@ app.post('/webhook', line.middleware(config), async (req, res) => {
   }
 });
 
+// 署名検証エラー・JSON解析エラーを、500ではなく適切なクライアントエラーとして返す。
+// （LINEの正規の送信は必ず正しい署名付きなので、ここに来るのは不正・壊れたリクエストのみ）
+// Expressの既定のエラー画面はスタックトレース（サーバー内のパス）を含むため、本文は返さない。
+app.use((err, req, res, next) => {
+  if (err instanceof line.SignatureValidationFailed) {
+    console.warn('署名検証に失敗したリクエストを拒否しました');
+    res.sendStatus(401);
+    return;
+  }
+  if (err instanceof line.JSONParseError) {
+    console.warn('JSONとして読めないリクエストを拒否しました');
+    res.sendStatus(400);
+    return;
+  }
+  console.error(err);
+  res.sendStatus(500);
+});
+
 async function handleEvent(event) {
   if (event.type !== 'message' || event.message.type !== 'text') {
     return;
