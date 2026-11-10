@@ -32,7 +32,7 @@ function loadBot(env = {}) {
       return require(name);
     },
   };
-  vm.runInNewContext(src + '\n;module.exports = { respond, buildReply, planReply, isBusinessHours, parseOrderLookup, normalizePhone, describeOrder, handleEvent, orderLookupEnabled };', sandbox);
+  vm.runInNewContext(src + '\n;module.exports = { respond, buildReply, planReply, isBusinessHours, parseOrderLookup, parseOrderParts, normalizePhone, describeOrder, handleEvent, orderLookupEnabled };', sandbox);
   return { ...sandbox.module.exports, sent };
 }
 
@@ -129,6 +129,42 @@ function check(name, ok, detail = '') {
   check('健康被害が含まれていれば、注文確認より健康被害を優先', r.type === 'adverse_event' && r.notify === true, r.type);
   r = await bot.respond('#1001 taro@example.com', { now: onHours, userId: 'Ux', findOrder: async () => { throw new Error('down'); } });
   check('Shopifyに接続できないとき：スタッフ対応に回す', r.type === 'order_lookup_error' && r.staff === true);
+
+  // --- 表記揺れ（どれも #1001 と同じ連絡先として読み取れること） ---
+  const same = (t, email, phone) => {
+    const r = bot.parseOrderLookup(t);
+    return r && r.orderNumber === '1001' && r.email === (email || null) && r.phone === (phone || null);
+  };
+  const E = 'taro@example.com', P = '09012345678';
+  for (const [t, e, ph] of [
+    ['＃１００１　ｔａｒｏ＠ｅｘａｍｐｌｅ．ｃｏｍ', E], ['#1001　taro@example.com', E], ['#1001 taro@example.comです', E],
+    ['注文番号は1001です。メールはtaro@example.comです', E], ['1001番 taro@example.com', E], ['No.1001 taro@example.com', E],
+    ['#1001taro@example.com', E], ['taro@example.com #1001', E], ['#1001\ntaro@example.com', E], ['# 1001 Taro@Example.COM', E],
+    ['注文番号：1001 メールアドレス：taro@example.com よろしくお願いします。', E],
+    ['注文#1001、電話090-1234-5678', null, P], ['#1001 090ー1234ー5678', null, P], ['#1001 ０９０－１２３４－５６７８', null, P],
+    ['#1001 090 1234 5678', null, P], ['#1001 +81 90 1234 5678', null, P], ['#1001 電話は09012345678です', null, P],
+  ]) check(`表記揺れ「${t.replace('\n', '↵')}」`, same(t, e, ph), JSON.stringify(bot.parseOrderLookup(t)));
+
+  // --- 2回に分けて送る ---
+  let two = await bot.respond('#1001', { now: onHours, userId: 'Utwo', findOrder });
+  check('「#1001」だけ：メールアドレスか電話番号をお願いする', two.type === 'order_need_contact' && two.text.includes('#1001') && two.text.includes('メールアドレスまたは電話番号'), two.text);
+  two = await bot.respond('taro@example.com', { now: new Date(onHours.getTime() + 60000), userId: 'Utwo', findOrder });
+  check('続けてメールアドレスだけ：覚えておいた #1001 で調べる', two.type === 'order_lookup' && two.text.includes('#1001'), two.text);
+  two = await bot.respond('taro@example.com', { now: new Date(onHours.getTime() + 120000), userId: 'Utwo', findOrder });
+  check('調べ終えたら番号は忘れる（次のメールアドレスだけには番号をお願いする）', two.type === 'order_need_number', two.text);
+  await bot.respond('注文番号は1001です', { now: onHours, userId: 'Uphone', findOrder });
+  two = await bot.respond('090-1234-5678', { now: new Date(onHours.getTime() + 60000), userId: 'Uphone', findOrder });
+  check('「注文番号は1001です」→電話番号だけ：調べる', two.type === 'order_lookup', two.text);
+  await bot.respond('#1001', { now: onHours, userId: 'Uold', findOrder });
+  two = await bot.respond('taro@example.com', { now: new Date(onHours.getTime() + 16 * 60000), userId: 'Uold', findOrder });
+  check('15分を過ぎたら番号は使わない', two.type === 'order_need_number', two.type);
+  await bot.respond('#1001', { now: onHours, userId: 'Uother1', findOrder });
+  two = await bot.respond('taro@example.com', { now: onHours, userId: 'Uother2', findOrder });
+  check('別の人が送った番号は使わない', two.type === 'order_need_number', two.type);
+  two = await bot.respond('#1001 届かないです', { now: onHours, userId: 'Utr', findOrder });
+  check('「#1001 届かない」：受付文に連絡先のお願いを添える（スタッフ対応のまま）', two.type === 'order_trouble' && two.staff && two.text.includes('ご注文 #1001 の配送状況をお調べします'), two.text);
+  check('金額（15000円）を注文番号と取り違えない', (await bot.respond('15000円以上で送料無料ですか', { now: onHours, userId: 'Uyen', findOrder })).type === 'faq_shipping');
+  check('数字だけ「1001」も注文番号とみなす', (await bot.respond('1001', { now: onHours, userId: 'Unum', findOrder })).type === 'order_need_contact');
 
   // 同じ人からの確認は10分に5回まで
   const many = [];
