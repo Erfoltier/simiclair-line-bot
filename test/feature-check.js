@@ -77,6 +77,7 @@ function check(name, ok, detail = '') {
   const menu = {
     '送料・お届けについて': ['menu_shipping', ['1,000円', '5営業日']],
     'お支払い方法について': ['menu_payment', ['クレジットカード']],
+    '送料・お支払いについて': ['menu_shipping_payment', ['1,000円', '5営業日', 'クレジットカード', '銀行振込']],
     '返品・交換について': ['menu_return', ['7日以内', '写真']],
     '専売品の購入方法': ['menu_password', ['カウンセリング']],
     'ご注文状況の確認': ['menu_order_status', ['ご注文番号']],
