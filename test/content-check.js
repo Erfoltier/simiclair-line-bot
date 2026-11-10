@@ -6,7 +6,7 @@ const vm = require('vm');
 const src = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
 const sb = { module: { exports: {} }, process: { env: {} }, console,
   require: (n) => n === '@line/bot-sdk' ? { messagingApi: { MessagingApiClient: function () {} }, middleware: () => () => {} }
-    : n === 'express' ? () => ({ post() {}, use() {}, listen() {} }) : require(n) };
+    : n === 'express' ? () => ({ get() {}, post() {}, use() {}, listen() {} }) : require(n) };
 vm.runInNewContext(src + '\n;module.exports={buildReply};', sb);
 const { buildReply } = sb.module.exports;
 

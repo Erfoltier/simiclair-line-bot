@@ -7,7 +7,7 @@ const vm = require('vm');
 // index.js をLINE・Express抜きで読み込み、buildReply / matchRule を取り出す
 function loadBot() {
   const src = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
-  const fakeApp = { post() {}, use() {}, listen() {} };
+  const fakeApp = { get() {}, post() {}, use() {}, listen() {} };
   const sandbox = {
     module: { exports: {} },
     process: { env: {} },

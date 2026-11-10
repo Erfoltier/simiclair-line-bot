@@ -28,7 +28,7 @@ function loadBot(env = {}) {
           JSONParseError: class {},
         };
       }
-      if (name === 'express') return () => ({ post() {}, use() {}, listen() {} });
+      if (name === 'express') return () => ({ get() {}, post() {}, use() {}, listen() {} });
       return require(name);
     },
   };

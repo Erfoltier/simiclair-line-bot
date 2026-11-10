@@ -565,6 +565,12 @@ function buildReply(userText, now = new Date()) {
 // Webhook
 // ---------------------------------------------------------------------------
 
+// 起動確認用（Renderの無料プランのスリープを防ぐため、外部の監視サービスから定期的にアクセスさせる）。
+// LINEの処理は通らず、決まった文字を返すだけ。
+app.get('/health', (req, res) => {
+  res.type('text/plain').send('ok');
+});
+
 app.post('/webhook', line.middleware(config), async (req, res) => {
   try {
     await Promise.all(req.body.events.map(handleEvent));
