@@ -32,7 +32,7 @@ function loadBot(env = {}) {
       return require(name);
     },
   };
-  vm.runInNewContext(src + '\n;module.exports = { respond, buildReply, planReply, isBusinessHours, parseOrderLookup, parseOrderParts, normalizePhone, describeOrder, handleEvent, orderLookupEnabled };', sandbox);
+  vm.runInNewContext(src + '\n;module.exports = { respond, buildReply, planReply, isBusinessHours, parseOrderLookup, parseOrderParts, normalizePhone, describeOrder, trackingLines, handleEvent, orderLookupEnabled };', sandbox);
   return { ...sandbox.module.exports, sent };
 }
 
@@ -172,6 +172,23 @@ function check(name, ok, detail = '') {
   check('「#1001 届かない」：受付文に連絡先のお願いを添える（スタッフ対応のまま）', two.type === 'order_trouble' && two.staff && two.text.includes('ご注文 #1001 の配送状況をお調べします'), two.text);
   check('金額（15000円）を注文番号と取り違えない', (await bot.respond('15000円以上で送料無料ですか', { now: onHours, userId: 'Uyen', findOrder })).type === 'faq_shipping');
   check('数字だけ「1001」も注文番号とみなす', (await bot.respond('1001', { now: onHours, userId: 'Unum', findOrder })).type === 'order_need_contact');
+
+  // --- 追跡ページ ---
+  const tl = (company, number, url) => bot.trackingLines({ company, number, url }).join('\n');
+  let x = tl('Yamato (JA)', '1234-5678-9012');
+  check('Yamato (JA)：「ヤマト運輸」と表示し、追跡ページを組み立てる', x.includes('配送会社：ヤマト運輸') && x.includes('crjz.b.NQ0010?id=123456789012'), x);
+  x = tl('Sagawa (JA)', '123456789012');
+  check('Sagawa (JA)：「佐川急便」と追跡ページ', x.includes('配送会社：佐川急便') && x.includes('okurijoNo=123456789012'), x);
+  x = tl('Japan Post (JA)', 'AB123456789JP');
+  check('Japan Post (JA)：「日本郵便」と追跡ページ（英字入りの番号もそのまま）', x.includes('配送会社：日本郵便') && x.includes('reqCodeNo1=AB123456789JP'), x);
+  x = tl('ゆうパケット', '１２３４５６７８９０１２');
+  check('ゆうパケット・全角の番号：日本郵便として半角の番号で組み立てる', x.includes('日本郵便') && x.includes('reqCodeNo1=123456789012'), x);
+  x = tl('Yamato (JA)', '123456789012', 'https://example.com/track/1');
+  check('Shopify側に追跡URLがあれば、そちらを優先する', x.includes('https://example.com/track/1') && !x.includes('kuronekoyamato'), x);
+  x = tl('西濃運輸', '123456789012');
+  check('知らない配送会社：社名はそのまま、URLは付けない', x.includes('配送会社：西濃運輸') && !x.includes('配送状況'), x);
+  x = tl('', '123456789012');
+  check('配送会社が空：「－」と表示し、URLは付けない', x.includes('配送会社：－') && !x.includes('配送状況'), x);
 
   // 同じ人からの確認は10分に5回まで
   const many = [];

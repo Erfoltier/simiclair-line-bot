@@ -407,6 +407,27 @@ function orderMatchesContact(order, { email, phone }) {
   return false;
 }
 
+// 配送会社の名前をそろえ、追跡URLが入っていないときは各社の追跡ページを組み立てる。
+// Shopify やプラスシッピングが入れる名前（「Yamato (JA)」など）は、お客様向けに日本語の社名で表示する。
+const CARRIERS = [
+  { name: 'ヤマト運輸', match: /yamato|kuroneko|ヤマト|クロネコ|宅急便|ネコポス/i,
+    url: (n) => `https://jizen.kuronekoyamato.co.jp/jizen/servlet/crjz.b.NQ0010?id=${n}` },
+  { name: '佐川急便', match: /sagawa|佐川|飛脚/i,
+    url: (n) => `https://k2k.sagawa-exp.co.jp/p/web/okurijosearch.do?okurijoNo=${n}` },
+  { name: '日本郵便', match: /japan\s*post|jp\s*post|日本郵便|ゆうパック|ゆうパケット|クリックポスト|郵便/i,
+    url: (n) => `https://trackings.post.japanpost.jp/services/srv/search/direct?reqCodeNo1=${n}&locale=ja` },
+];
+
+function trackingLines(t) {
+  const carrier = CARRIERS.find((c) => c.match.test(t.company || ''));
+  const name = carrier ? carrier.name : (t.company || '－');
+  const number = String(t.number).normalize('NFKC').replace(/[^0-9A-Za-z]/g, '');
+  const url = t.url || (carrier && number ? carrier.url(number) : null);
+  const lines = [`配送会社：${name}／追跡番号：${t.number}`];
+  if (url) lines.push(`配送状況：${url}`);
+  return lines;
+}
+
 function describeOrder(order) {
   const lines = [`ご注文 ${order.name} の状況をお知らせします。`];
   if (order.cancelledAt) {
@@ -425,10 +446,7 @@ function describeOrder(order) {
     .filter((t) => t && t.number);
   if (ship === 'FULFILLED' || ship === 'PARTIALLY_FULFILLED') {
     lines.push(ship === 'FULFILLED' ? '発送：発送済みです。' : '発送：一部の商品を発送済みです。残りの商品は準備ができ次第発送いたします。');
-    for (const t of tracking) {
-      lines.push(`配送会社：${t.company || '－'}／追跡番号：${t.number}`);
-      if (t.url) lines.push(`配送状況：${t.url}`);
-    }
+    for (const t of tracking) lines.push(...trackingLines(t));
     if (!tracking.length) lines.push('追跡番号は発送完了のメールでご確認ください。');
   } else if (pay === 'PENDING') {
     lines.push('発送：お振込みの確認後、5営業日以内に発送いたします。');
