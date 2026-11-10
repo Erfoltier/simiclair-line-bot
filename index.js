@@ -337,14 +337,17 @@ function parseOrderLookup(text) {
 // 覚えるのは注文番号だけで、メールアドレス・電話番号は保存しない。サーバーが再起動すると消える。
 const PENDING_MS = 15 * 60 * 1000;
 const pendingOrders = new Map();
-function rememberOrder(userId, orderNumber, now) {
-  if (userId) pendingOrders.set(userId, { orderNumber, at: now.getTime() });
+// 時刻は、お客様がLINEで送った時刻（Webhookの timestamp）で比べる。
+// LINEの再送で届く順番が入れ替わっても、連絡先が注文番号より後に送られたときだけ組み合わせる。
+function rememberOrder(userId, orderNumber, sentAt) {
+  if (userId) pendingOrders.set(userId, { orderNumber, at: sentAt });
 }
-function takePendingOrder(userId, now) {
+function takePendingOrder(userId, sentAt) {
   const p = userId && pendingOrders.get(userId);
   if (!p) return null;
+  if (sentAt < p.at) return null;                    // 注文番号より前に送られた連絡先には使わない（番号は残す）
   pendingOrders.delete(userId);
-  return now.getTime() - p.at <= PENDING_MS ? p.orderNumber : null;
+  return sentAt - p.at <= PENDING_MS ? p.orderNumber : null;
 }
 
 const ORDER_NEED_CONTACT = (n) =>
@@ -518,6 +521,7 @@ function withHoursNote(reply, now) {
 // 1通のメッセージへの返信を決める。ctx: { now, userId, findOrder（試験用） }
 async function respond(userText, ctx = {}) {
   const now = ctx.now || new Date();
+  const sentAt = ctx.sentAt || now.getTime();   // お客様が送った時刻（LINEの timestamp）
   let reply = planReply(userText);
   if (reply.type !== 'adverse_event' && orderLookupEnabledFor(ctx)) {
     const parts = parseOrderParts(userText);
@@ -525,15 +529,15 @@ async function respond(userText, ctx = {}) {
     let req = null;
     if (parts.orderNumber && hasContact) {
       req = { orderNumber: parts.orderNumber, email: parts.email, phone: parts.phone };
-      takePendingOrder(ctx.userId, now);
+      takePendingOrder(ctx.userId, sentAt);
     } else if (!parts.orderNumber && hasContact) {
-      const pending = takePendingOrder(ctx.userId, now);
+      const pending = takePendingOrder(ctx.userId, sentAt);
       if (pending) req = { orderNumber: pending, email: parts.email, phone: parts.phone };
       else if (reply.type === 'fallback') reply = { type: 'order_need_number', text: ORDER_NEED_NUMBER };
     } else if (parts.orderNumber && parts.explicit &&
                ['fallback', 'faq_delivery_time', 'order_trouble', 'menu_order_status'].includes(reply.type)) {
       // 注文番号だけが届いた：連絡先を聞き、番号は覚えておく
-      rememberOrder(ctx.userId, parts.orderNumber, now);
+      rememberOrder(ctx.userId, parts.orderNumber, sentAt);
       const ask = ORDER_NEED_CONTACT(parts.orderNumber);
       reply = reply.type === 'order_trouble'
         ? { ...reply, text: reply.text + '\n\n' + ask }
@@ -624,7 +628,22 @@ async function notifyStaff(now) {
   }
 }
 
+// LINEの「Webhookの再送」で同じイベントが2回届いても、1回だけ処理する（イベントIDを1時間覚えておく）
+const SEEN_MS = 60 * 60 * 1000;
+const seenEvents = new Map();
+function alreadySeen(id, nowMs) {
+  if (!id) return false;
+  if (seenEvents.size > 5000) {
+    for (const [k, t] of seenEvents) if (nowMs - t > SEEN_MS) seenEvents.delete(k);
+  }
+  if (seenEvents.has(id)) return true;
+  seenEvents.set(id, nowMs);
+  return false;
+}
+
 async function handleEvent(event) {
+  if (alreadySeen(event.webhookEventId, Date.now())) return;
+
   // ボットがグループに招待されたら、通知先に設定するためのグループIDを知らせる
   if (event.type === 'join' && event.source && (event.source.type === 'group' || event.source.type === 'room')) {
     const id = event.source.groupId || event.source.roomId;
@@ -647,7 +666,7 @@ async function handleEvent(event) {
   }
 
   const now = new Date();
-  const reply = await respond(event.message.text, { now, userId: event.source.userId });
+  const reply = await respond(event.message.text, { now, userId: event.source.userId, sentAt: event.timestamp });
 
   // 返信には期限があるため、通知より先に返信する
   await client.replyMessage({
