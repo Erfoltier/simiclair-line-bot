@@ -295,9 +295,20 @@ function normalizePhone(s) {
   return d.length === 10 || d.length === 11 ? d : null;
 }
 
-// 「注文番号」と「メールアドレスまたは電話番号」が両方含まれているときだけ、確認の依頼とみなす
-function parseOrderLookup(text) {
-  let rest = text.normalize('NFKC');
+// 注文番号・メールアドレス・電話番号を読み取る（全角・半角、「〜です」などの語尾、区切りの揺れに対応）
+// explicit：注文番号だと分かる書き方か（#1001、注文番号1001、No.1001、1001番、数字だけのメッセージ）。
+//   「15000円以上で送料無料？」のような金額を注文番号と取り違えないよう、連絡先がないときはこれを条件にする。
+function parseOrderParts(text) {
+  let rest = text.normalize('NFKC')
+    .replace(/(\d)[‐‑‒–—―ー−ｰ~〜](?=\d)/g, '$1-')           // 電話番号の「ー」「〜」などをハイフンに
+    .replace(/#\s?(\d{4,7})(?=[A-Za-z])/g, '#$1 ')          // 「#1001taro@…」のように続けて書かれた場合
+    .replace(/#\s?(\d{14,18})(?!\d)/g, (m, run) => {          // 「#100109012345678」のように電話番号と続けて書かれた場合
+      for (let n = 4; n <= 7; n++) {                             // 残りが0から始まる10〜11桁（電話番号）になる切れ目で分ける
+        const tail = run.slice(n);
+        if (tail[0] === '0' && (tail.length === 10 || tail.length === 11)) return `#${run.slice(0, n)} ${tail}`;
+      }
+      return m;
+    });
   const emailMatch = rest.match(EMAIL_RE);
   const email = emailMatch ? emailMatch[0].toLowerCase() : null;
   if (emailMatch) rest = rest.replace(emailMatch[0], ' ');
@@ -307,10 +318,39 @@ function parseOrderLookup(text) {
     phone = normalizePhone(phoneMatch[0]);
     if (phone) rest = rest.replace(phoneMatch[0], ' ');
   }
-  const orderMatch = rest.match(/#\s?(\d{4,7})(?!\d)/) || rest.match(/(?<!\d)(\d{4,7})(?!\d)/);
-  if (!orderMatch || (!email && !phone)) return null;
-  return { orderNumber: orderMatch[1], email, phone };
+  const hash = rest.match(/#\s?(\d{4,7})(?!\d)/);
+  const plain = rest.match(/(?<!\d)(\d{4,7})(?!\d)/);
+  const orderMatch = hash || plain;
+  const bare = rest.replace(/[\s、。,.!！?？:：]/g, '');
+  const explicit = Boolean(hash) || (Boolean(plain) && (/注文|no\.?\s?\d|番号|\d番/i.test(rest) || /^\d{4,7}(です)?$/.test(bare)));
+  return { orderNumber: orderMatch ? orderMatch[1] : null, email, phone, explicit };
 }
+
+// 「注文番号」と「メールアドレスまたは電話番号」が両方含まれているときだけ、確認の依頼とみなす
+function parseOrderLookup(text) {
+  const p = parseOrderParts(text);
+  if (!p.orderNumber || (!p.email && !p.phone)) return null;
+  return { orderNumber: p.orderNumber, email: p.email, phone: p.phone };
+}
+
+// 2回に分けて送られた場合（先に「#1001」、あとで連絡先）のため、注文番号だけを15分間覚えておく。
+// 覚えるのは注文番号だけで、メールアドレス・電話番号は保存しない。サーバーが再起動すると消える。
+const PENDING_MS = 15 * 60 * 1000;
+const pendingOrders = new Map();
+function rememberOrder(userId, orderNumber, now) {
+  if (userId) pendingOrders.set(userId, { orderNumber, at: now.getTime() });
+}
+function takePendingOrder(userId, now) {
+  const p = userId && pendingOrders.get(userId);
+  if (!p) return null;
+  pendingOrders.delete(userId);
+  return now.getTime() - p.at <= PENDING_MS ? p.orderNumber : null;
+}
+
+const ORDER_NEED_CONTACT = (n) =>
+  `ご注文 #${n} の配送状況をお調べします。ご注文時のメールアドレスまたは電話番号をお送りください。`;
+const ORDER_NEED_NUMBER =
+  '配送状況をお調べするには、ご注文番号もお送りください（例：#1001 taro@example.com）。ご注文番号はご注文確認メールに記載しています。';
 
 let shopifyToken = null;
 let shopifyTokenExpiresAt = 0;
@@ -462,7 +502,25 @@ async function respond(userText, ctx = {}) {
   const now = ctx.now || new Date();
   let reply = planReply(userText);
   if (reply.type !== 'adverse_event' && orderLookupEnabledFor(ctx)) {
-    const req = parseOrderLookup(userText);
+    const parts = parseOrderParts(userText);
+    const hasContact = Boolean(parts.email || parts.phone);
+    let req = null;
+    if (parts.orderNumber && hasContact) {
+      req = { orderNumber: parts.orderNumber, email: parts.email, phone: parts.phone };
+      takePendingOrder(ctx.userId, now);
+    } else if (!parts.orderNumber && hasContact) {
+      const pending = takePendingOrder(ctx.userId, now);
+      if (pending) req = { orderNumber: pending, email: parts.email, phone: parts.phone };
+      else if (reply.type === 'fallback') reply = { type: 'order_need_number', text: ORDER_NEED_NUMBER };
+    } else if (parts.orderNumber && parts.explicit &&
+               ['fallback', 'faq_delivery_time', 'order_trouble', 'menu_order_status'].includes(reply.type)) {
+      // 注文番号だけが届いた：連絡先を聞き、番号は覚えておく
+      rememberOrder(ctx.userId, parts.orderNumber, now);
+      const ask = ORDER_NEED_CONTACT(parts.orderNumber);
+      reply = reply.type === 'order_trouble'
+        ? { ...reply, text: reply.text + '\n\n' + ask }
+        : { type: 'order_need_contact', text: ask };
+    }
     if (req) {
       const result = await lookupOrder(req, { ...ctx, now });
       // 注文トラブルの連絡に注文番号が添えられていた場合は、状況を返したうえでスタッフ対応にも回す
