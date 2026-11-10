@@ -143,6 +143,10 @@ function check(name, ok, detail = '') {
     ['注文番号：1001 メールアドレス：taro@example.com よろしくお願いします。', E],
     ['注文#1001、電話090-1234-5678', null, P], ['#1001 090ー1234ー5678', null, P], ['#1001 ０９０－１２３４－５６７８', null, P],
     ['#1001 090 1234 5678', null, P], ['#1001 +81 90 1234 5678', null, P], ['#1001 電話は09012345678です', null, P],
+    ['#1001 09012345678', null, P], ['#1001　０９０１２３４５６７８', null, P], ['1001 09012345678', null, P],
+    ['#1001\n09012345678', null, P], ['#1001、09012345678', null, P], ['#1001 +819012345678', null, P],
+    ['#100109012345678', null, P], ['＃１００１０９０１２３４５６７８', null, P],
+    ['#1001 0368995322', null, '0368995322'],
   ]) check(`表記揺れ「${t.replace('\n', '↵')}」`, same(t, e, ph), JSON.stringify(bot.parseOrderLookup(t)));
 
   // --- 2回に分けて送る ---
@@ -155,6 +159,9 @@ function check(name, ok, detail = '') {
   await bot.respond('注文番号は1001です', { now: onHours, userId: 'Uphone', findOrder });
   two = await bot.respond('090-1234-5678', { now: new Date(onHours.getTime() + 60000), userId: 'Uphone', findOrder });
   check('「注文番号は1001です」→電話番号だけ：調べる', two.type === 'order_lookup', two.text);
+  await bot.respond('#1001', { now: onHours, userId: 'Uphone2', findOrder });
+  two = await bot.respond('０９０１２３４５６７８', { now: new Date(onHours.getTime() + 60000), userId: 'Uphone2', findOrder });
+  check('「#1001」→全角で続けて書いた電話番号だけ：調べる', two.type === 'order_lookup', two.text);
   await bot.respond('#1001', { now: onHours, userId: 'Uold', findOrder });
   two = await bot.respond('taro@example.com', { now: new Date(onHours.getTime() + 16 * 60000), userId: 'Uold', findOrder });
   check('15分を過ぎたら番号は使わない', two.type === 'order_need_number', two.type);

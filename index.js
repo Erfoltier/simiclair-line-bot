@@ -301,7 +301,14 @@ function normalizePhone(s) {
 function parseOrderParts(text) {
   let rest = text.normalize('NFKC')
     .replace(/(\d)[‐‑‒–—―ー−ｰ~〜](?=\d)/g, '$1-')           // 電話番号の「ー」「〜」などをハイフンに
-    .replace(/#\s?(\d{4,7})(?=[A-Za-z])/g, '#$1 ');         // 「#1001taro@…」のように続けて書かれた場合
+    .replace(/#\s?(\d{4,7})(?=[A-Za-z])/g, '#$1 ')          // 「#1001taro@…」のように続けて書かれた場合
+    .replace(/#\s?(\d{14,18})(?!\d)/g, (m, run) => {          // 「#100109012345678」のように電話番号と続けて書かれた場合
+      for (let n = 4; n <= 7; n++) {                             // 残りが0から始まる10〜11桁（電話番号）になる切れ目で分ける
+        const tail = run.slice(n);
+        if (tail[0] === '0' && (tail.length === 10 || tail.length === 11)) return `#${run.slice(0, n)} ${tail}`;
+      }
+      return m;
+    });
   const emailMatch = rest.match(EMAIL_RE);
   const email = emailMatch ? emailMatch[0].toLowerCase() : null;
   if (emailMatch) rest = rest.replace(emailMatch[0], ' ');
