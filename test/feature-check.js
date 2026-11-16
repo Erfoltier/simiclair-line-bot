@@ -32,7 +32,7 @@ function loadBot(env = {}) {
       return require(name);
     },
   };
-  vm.runInNewContext(src + '\n;module.exports = { respond, buildReply, planReply, isBusinessHours, parseOrderLookup, parseOrderParts, normalizePhone, describeOrder, trackingLines, handleEvent, orderLookupEnabled };', sandbox);
+  vm.runInNewContext(src + '\n;module.exports = { respond, buildReply, planReply, isBusinessHours, parseOrderLookup, parseOrderParts, normalizePhone, describeOrder, trackingLines, handleEvent, orderLookupEnabled, counselingReply };', sandbox);
   return { ...sandbox.module.exports, sent };
 }
 
@@ -227,6 +227,42 @@ function check(name, ok, detail = '') {
   await notifyBot.handleEvent({ type: 'join', replyToken: 'rt2', source: { type: 'group', groupId: 'Cnewgroup' } });
   const joinReply = notifyBot.sent.replies[notifyBot.sent.replies.length - 1].messages[0].text;
   check('グループに招待されたら、通知先に設定するIDを知らせる', joinReply.includes('Cnewgroup') && joinReply.includes('STAFF_NOTIFY_TO'));
+
+  // --- カウンセリング予約 ---
+  const tmplOf = (r) => (r.messages || []).find((m) => m.type === 'template');
+  const limitsOk = (t) => t && t.altText.length <= 400 && t.template.title.length <= 40 && t.template.text.length <= 60 &&
+    t.template.actions.length >= 1 && t.template.actions.length <= 4 && t.template.actions.every((a) => a.label.length <= 20);
+  let cr = bot.planReply('カウンセリングを予約したい');
+  let tp = tmplOf(cr);
+  check('URL未設定：説明文＋ボタン1つ（オンライン＝文字を送るボタン）', cr.type === 'counseling' && tp && tp.template.actions.length === 1 &&
+    tp.template.actions[0].type === 'message' && tp.template.actions[0].text === 'オンラインカウンセリング', JSON.stringify(tp));
+  check('URL未設定：対面はこのトークで希望日時を受け付ける案内', cr.messages[0].text.includes('このトークにご希望の日時をお送りください'), cr.messages[0].text);
+  check('URL未設定：予約ページの案内は出さず、10分程度の案内は出す', !cr.messages[0].text.includes('予約ページ') && cr.messages[0].text.includes('10分程度'), cr.messages[0].text);
+  check('ボタンの文字数などがLINEの上限内（未設定）', limitsOk(tp), JSON.stringify(tp));
+  check('メニュー「カウンセリング予約」も同じ案内', bot.planReply('カウンセリング予約').type === 'menu_counseling' && tmplOf(bot.planReply('カウンセリング予約')));
+  const man = await bot.respond('オンラインカウンセリング', { now: offHours, userId: 'Ucoun', findOrder });
+  check('「オンラインカウンセリング」（未設定時）：手動受付の案内＋スタッフ対応＋時間外の一文', man.type === 'counseling_online_manual' && man.staff && man.text.includes('LINEのビデオ通話') && man.text.includes(NOTE), man.text);
+  check('予約のキャンセルは注文トラブル（スタッフ対応）に回す', bot.planReply('カウンセリングの予約をキャンセルしたい').type === 'order_trouble');
+  check('「#1001 カウンセリング予約したい」は配送状況の確認ではなく予約の案内', (await bot.respond('#1001 カウンセリング予約したい', { now: onHours, userId: 'Uc2', findOrder })).type === 'counseling');
+  check('カウンセリングの返信に「医師」「診察」を使わない', !/医師|診察/.test(JSON.stringify(cr)) && !/医師|診察/.test(man.text));
+
+  const urlBot = loadBot({ COUNSELING_FACE_URL: 'https://example.com/face', COUNSELING_ONLINE_URL: 'https://example.com/online' });
+  cr = urlBot.planReply('カウンセリングを予約したい'); tp = tmplOf(cr);
+  check('URL設定済み：対面・オンラインの2つのリンクボタン', tp && tp.template.actions.length === 2 && tp.template.actions.every((a) => a.type === 'uri') &&
+    tp.template.actions[0].uri === 'https://example.com/face' && tp.template.actions[1].uri === 'https://example.com/online', JSON.stringify(tp));
+  check('URL設定済み：対面の「このトークで」案内は出さない', !cr.messages[0].text.includes('このトークにご希望の日時'), cr.messages[0].text);
+  check('URL設定済み：予約ページから空いている日時を選ぶ案内＋事前準備＋10分程度', cr.messages[0].text.includes('予約ページから空いている日時をお選びください') &&
+    cr.messages[0].text.includes('通話リクエスト') && cr.messages[0].text.includes('10分程度'), cr.messages[0].text);
+  check('ボタンの文字数などがLINEの上限内（設定済み）', limitsOk(tp), JSON.stringify(tp));
+  check('URL設定済み：代わりの文（altText）にURLが入る', tp.altText.includes('https://example.com/face') && tp.altText.includes('https://example.com/online'), tp.altText);
+  check('URL設定済み：「オンラインカウンセリング」はふつうの予約案内に戻る', urlBot.planReply('オンラインカウンセリング').type === 'counseling');
+  const badBot = loadBot({ COUNSELING_FACE_URL: 'http://insecure.example.com', COUNSELING_ONLINE_URL: 'not a url' });
+  check('https 以外のURLは使わない（未設定と同じ扱い）', tmplOf(badBot.planReply('カウンセリング予約')).template.actions.length === 1);
+
+  const lineBot = loadBot();
+  await lineBot.handleEvent({ type: 'message', replyToken: 'rt', source: { type: 'user', userId: 'Ux' }, message: { type: 'text', text: 'カウンセリング予約' }, webhookEventId: 'ev-c1', timestamp: Date.now() });
+  const sentMsgs = lineBot.sent.replies[0] && lineBot.sent.replies[0].messages;
+  check('LINEには説明文とボタンの2通をまとめて返す', sentMsgs && sentMsgs.length === 2 && sentMsgs[0].type === 'text' && sentMsgs[1].type === 'template', JSON.stringify(sentMsgs));
 
   // --- Webhookの再送：同じイベントが2回届いても1回だけ処理する ---
   const dupBot = loadBot({ STAFF_NOTIFY_TO: 'Cstaff' });
