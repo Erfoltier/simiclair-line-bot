@@ -16,6 +16,7 @@
 //   - スタッフ対応に回る返信には、営業時間外なら「翌営業日以降のご連絡」の一文を添える
 //   - 健康被害の連絡が来たら、スタッフのLINEグループ等へすぐ通知する（STAFF_NOTIFY_TO）
 //   - リッチメニューのボタン文言には、決まった返信を返す（MENU_REPLIES）
+//   - カウンセリング予約：対面・オンラインのボタンを返す（COUNSELING_FACE_URL / COUNSELING_ONLINE_URL）
 //   - 注文番号＋注文時のメールアドレス（または電話番号）が送られたら、Shopifyで配送状況を調べて返す
 //     （SHOPIFY_SHOP / SHOPIFY_CLIENT_ID / SHOPIFY_CLIENT_SECRET が設定されているときだけ動く）
 
@@ -54,6 +55,13 @@ const ORDER_TROUBLE_MESSAGE =
 const ORDER_LOOKUP_GUIDE =
   'ご注文済みの方は、ご注文番号とご注文時のメールアドレス（または電話番号）を1つのメッセージでお送りいただくと、配送状況を自動でお調べします。\n例：#1001 taro@example.com';
 
+// ゼオスキンの「カウンセリング前に購入する」方法（購入後カウンセリング）の案内（2026-11 オーナーの方針）
+const COUNSELING_FIRST_PURCHASE =
+  '購入パスワードをお持ちでない方は、カート画面で「カウンセリング前に購入する」を選ぶと、先にご購入いただき、あとからカウンセリングを受けることもできます（3つの項目へのご同意が必要です）。\n' +
+  'ご注文から14日以内に、このトークでご注文番号を添えてカウンセリングをご予約ください。カウンセリングのあとに発送いたします。\n' +
+  '・カウンセリングの結果ご購入いただけない場合は、ゼオスキンの代金を全額返金いたします。\n' +
+  '・14日以内にご予約がない場合や、お客様のご都合によるキャンセルの場合は、商品代金の5%（最低550円）を差し引いて返金いたします。';
+
 const EFFICACY_TEMPLATE =
   '製品の効果や使用感には個人差があり、特定の症状や肌状態に合うかどうかについては断定的にお答えできません。\n' +
   '一般的な製品特徴は各商品ページをご確認ください。気になる症状がある場合や、妊娠・授乳中、肌が敏感な時期のご使用については、かかりつけの医療機関にご相談ください。';
@@ -71,16 +79,27 @@ const rules = [
     handle: () => HOLD_MESSAGE,
   },
 
+  // --- カウンセリング予約：ボタンで対面・オンラインを選んでもらう（返信は counselingReply()）。
+  // 予約の取り消し・変更は、スタッフが個別に対応するため注文トラブルの受付に回す（unless）。
+  {
+    type: 'counseling',
+    keywords: ['カウンセリング', '予約', '対面', 'オンライン相談', 'オンラインで相談'],
+    unless: ['キャンセル', '取り消', '取消', '変更', '変えたい', 'やめたい'],
+    handle: () => counselingReply().text,
+  },
+
   // --- 購入パスワード（医療機関専売品）：「パスワードを間違えた」を注文トラブルと誤判定しないよう先に判定 ---
   // お客様向けの返信では「医師」「診察」と書かず「カウンセリング」とする（2026-11 オーナーの方針）。
   // 判定用のキーワードの「診察」は、お客様が入力することがあるので残す。
   {
     type: 'faq_password',
-    keywords: ['パスワード', '診察', 'カウンセリング', '予約', '購入できない', '買えない', '先に進めない', '進めません', '進めない',
+    keywords: ['パスワード', '診察', '購入できない', '買えない', '先に進めない', '進めません', '進めない',
       '買い方', '購入方法', '購入の仕方', 'どうやったら買', 'どうすれば買', '専売', 'カートで', 'カートから'],
     handle: () =>
       'ゼオスキン（ZO SKIN HEALTH）は医療機関専売品のため、カウンセリングを受けた方にのみ購入パスワードをお伝えしています。\n' +
-      '購入パスワードはカート画面の「ご購入手続きへ」の上に入力してください。カウンセリングのご希望や、購入パスワードがご不明・入力できない場合は、このトークにその旨をお送りください。担当スタッフよりご連絡いたします。',
+      '購入パスワードはカート画面の「ご購入手続きへ」の上に入力してください。\n\n' +
+      COUNSELING_FIRST_PURCHASE + '\n\n' +
+      'カウンセリングのご予約は、メニューの「カウンセリング予約」からどうぞ。購入パスワードがご不明・入力できない場合は、このトークにその旨をお送りください。担当スタッフよりご連絡いたします。',
   },
 
   // --- 注文トラブル：受付メッセージのみ返し、スタッフが個別対応 ---
@@ -256,11 +275,60 @@ const MENU_REPLIES = {
     ? { type: 'menu_order_status', text: ORDER_LOOKUP_GUIDE.replace('ご注文済みの方は、', '') }
     : { type: 'menu_order_status', staff: true,
         text: 'ご注文番号とご注文者のお名前をこのトークにお送りください。担当スタッフより配送状況を確認のうえ、順次ご連絡いたします。' }),
+  'カウンセリング予約': () => ({ ...counselingReply(), type: 'menu_counseling' }),
   'その他のお問い合わせ': () => ({
     type: 'menu_contact', staff: true,
     text: 'お問い合わせ内容をこのトークにお送りください。担当スタッフより確認のうえ、順次ご連絡いたします。',
   }),
 };
+
+// ---------------------------------------------------------------------------
+// カウンセリング予約
+// 対面：クリニックのLINE予約申請フォーム（COUNSELING_FACE_URL）。未設定なら、このトークで希望日時を受け付ける。
+// オンライン：予約システム（COUNSELING_ONLINE_URL）。未設定なら、押すと「オンラインカウンセリング」が送られ、
+//   手動で受け付ける案内を返す（ONLINE_MANUAL_MESSAGE）。
+// LINEのボタンテンプレートの上限：ボタンの文字は20字、本文は見出しありで60字、代わりの文（altText）は400字。
+// ---------------------------------------------------------------------------
+
+const COUNSELING_FACE_URL = validUrl(process.env.COUNSELING_FACE_URL);
+const COUNSELING_ONLINE_URL = validUrl(process.env.COUNSELING_ONLINE_URL);
+const ONLINE_COUNSELING_TEXT = 'オンラインカウンセリング';
+
+function validUrl(u) {
+  return u && /^https:\/\/\S+$/.test(u.trim()) && u.trim().length <= 1000 ? u.trim() : null;
+}
+
+const ONLINE_MANUAL_MESSAGE =
+  'オンラインカウンセリングのご予約を承ります。このトークに、\n①ご注文番号（ご注文済みの方）\n②ご希望の日時を3つ\n③お名前\nをお送りください。担当者から日時をご連絡します。\n' +
+  'オンラインカウンセリングはLINEのビデオ通話で行います。';
+
+function counselingReply() {
+  const lines = [
+    'カウンセリングのご予約は、次の2つの方法からお選びいただけます。',
+    '・対面カウンセリング（いしだ皮フ科・美容皮膚科）',
+    '・オンラインカウンセリング（LINEのビデオ通話）',
+    'カウンセリング前にご購入済みの方は、ご予約の際にご注文番号を添えてください。',
+  ];
+  if (!COUNSELING_FACE_URL) lines.push('対面カウンセリングをご希望の方は、このトークにご希望の日時をお送りください。担当者からご連絡します。');
+  const text = lines.join('\n');
+
+  const actions = [];
+  if (COUNSELING_FACE_URL) actions.push({ type: 'uri', label: '対面（いしだ皮フ科）', uri: COUNSELING_FACE_URL });
+  actions.push(COUNSELING_ONLINE_URL
+    ? { type: 'uri', label: 'オンライン（LINEビデオ）', uri: COUNSELING_ONLINE_URL }
+    : { type: 'message', label: 'オンライン（LINEビデオ）', text: ONLINE_COUNSELING_TEXT });
+
+  const alt = ['カウンセリングのご予約方法', COUNSELING_FACE_URL ? `対面：${COUNSELING_FACE_URL}` : '対面：このトークでご希望の日時をお送りください',
+    COUNSELING_ONLINE_URL ? `オンライン：${COUNSELING_ONLINE_URL}` : 'オンライン：このトークで「オンラインカウンセリング」とお送りください',
+    'ご購入済みの方はご注文番号を添えてください'].join('／');
+
+  const template = {
+    type: 'template',
+    altText: alt.slice(0, 400),
+    template: { type: 'buttons', title: 'カウンセリングのご予約', text: 'ご希望の方法を選んでください。', actions },
+  };
+  return { type: 'counseling', text, messages: [{ type: 'text', text }, template] };
+}
 
 function matchMenu(text) {
   const key = text.normalize('NFKC').trim();
@@ -511,13 +579,19 @@ function planReply(userText) {
   }
   const menu = matchMenu(userText);
   if (menu) return menu;
+  if (userText.normalize('NFKC').trim() === ONLINE_COUNSELING_TEXT && !COUNSELING_ONLINE_URL) {
+    return { type: 'counseling_online_manual', staff: true, text: ONLINE_MANUAL_MESSAGE };
+  }
+  if (rule && rule.type === 'counseling') return counselingReply();
   if (!rule) return { type: 'fallback', staff: true, text: FALLBACK_MESSAGE };
   return { type: rule.type, staff: Boolean(rule.staff), notify: Boolean(rule.notify), text: rule.handle(userText) };
 }
 
 function withHoursNote(reply, now) {
-  if (reply.staff && !isBusinessHours(now)) return { ...reply, text: reply.text + '\n' + OUT_OF_HOURS_NOTE };
-  return reply;
+  if (!reply.staff || isBusinessHours(now)) return reply;
+  const text = reply.text + '\n' + OUT_OF_HOURS_NOTE;
+  const messages = reply.messages && reply.messages.map((m, i) => (i === 0 && m.type === 'text' ? { ...m, text } : m));
+  return { ...reply, text, ...(messages ? { messages } : {}) };
 }
 
 // 1通のメッセージへの返信を決める。ctx: { now, userId, findOrder（試験用） }
@@ -673,7 +747,7 @@ async function handleEvent(event) {
   // 返信には期限があるため、通知より先に返信する
   await client.replyMessage({
     replyToken: event.replyToken,
-    messages: [{ type: 'text', text: reply.text }],
+    messages: reply.messages || [{ type: 'text', text: reply.text }],
   });
 
   if (reply.notify) {

@@ -73,7 +73,7 @@
  },
  {
   "text": "カウンセリングの予約をしたいです",
-  "expect": "faq_password"
+  "expect": "counseling"
  },
  {
   "text": "パスワードが違うと言われて購入できません",
@@ -233,7 +233,7 @@
  },
  {
   "text": "カウンセリングはオンラインでも受けられますか",
-  "expect": "faq_password"
+  "expect": "counseling"
  },
  {
   "text": "シワにも効きますか？",
@@ -685,7 +685,7 @@
  },
  {
   "text": "カウンセリングを受けたいです",
-  "expect": "faq_password"
+  "expect": "counseling"
  },
  {
   "text": "1週間たっても届きません",
@@ -746,5 +746,45 @@
  {
   "text": "メルマガを止めたい",
   "expect": "fallback"
+ },
+ {
+  "text": "カウンセリング予約したい",
+  "expect": "counseling"
+ },
+ {
+  "text": "オンラインカウンセリングを受けたいです",
+  "expect": "counseling"
+ },
+ {
+  "text": "対面で相談したいです",
+  "expect": "counseling"
+ },
+ {
+  "text": "予約したいです",
+  "expect": "counseling"
+ },
+ {
+  "text": "予約方法を教えてください",
+  "expect": "counseling"
+ },
+ {
+  "text": "オンライン相談はできますか",
+  "expect": "counseling"
+ },
+ {
+  "text": "カウンセリングの予約をキャンセルしたい",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "予約を変更したいです",
+  "expect": "order_trouble"
+ },
+ {
+  "text": "オンラインで支払えますか",
+  "expect": "faq_payment"
+ },
+ {
+  "text": "診察を受けたいです",
+  "expect": "faq_password"
  }
 ]
