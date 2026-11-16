@@ -237,6 +237,7 @@ function check(name, ok, detail = '') {
   check('URL未設定：説明文＋ボタン1つ（オンライン＝文字を送るボタン）', cr.type === 'counseling' && tp && tp.template.actions.length === 1 &&
     tp.template.actions[0].type === 'message' && tp.template.actions[0].text === 'オンラインカウンセリング', JSON.stringify(tp));
   check('URL未設定：対面はこのトークで希望日時を受け付ける案内', cr.messages[0].text.includes('このトークにご希望の日時をお送りください'), cr.messages[0].text);
+  check('URL未設定：予約ページの案内は出さず、10分程度の案内は出す', !cr.messages[0].text.includes('予約ページ') && cr.messages[0].text.includes('10分程度'), cr.messages[0].text);
   check('ボタンの文字数などがLINEの上限内（未設定）', limitsOk(tp), JSON.stringify(tp));
   check('メニュー「カウンセリング予約」も同じ案内', bot.planReply('カウンセリング予約').type === 'menu_counseling' && tmplOf(bot.planReply('カウンセリング予約')));
   const man = await bot.respond('オンラインカウンセリング', { now: offHours, userId: 'Ucoun', findOrder });
@@ -250,6 +251,8 @@ function check(name, ok, detail = '') {
   check('URL設定済み：対面・オンラインの2つのリンクボタン', tp && tp.template.actions.length === 2 && tp.template.actions.every((a) => a.type === 'uri') &&
     tp.template.actions[0].uri === 'https://example.com/face' && tp.template.actions[1].uri === 'https://example.com/online', JSON.stringify(tp));
   check('URL設定済み：対面の「このトークで」案内は出さない', !cr.messages[0].text.includes('このトークにご希望の日時'), cr.messages[0].text);
+  check('URL設定済み：予約ページから空いている日時を選ぶ案内＋事前準備＋10分程度', cr.messages[0].text.includes('予約ページから空いている日時をお選びください') &&
+    cr.messages[0].text.includes('通話リクエスト') && cr.messages[0].text.includes('10分程度'), cr.messages[0].text);
   check('ボタンの文字数などがLINEの上限内（設定済み）', limitsOk(tp), JSON.stringify(tp));
   check('URL設定済み：代わりの文（altText）にURLが入る', tp.altText.includes('https://example.com/face') && tp.altText.includes('https://example.com/online'), tp.altText);
   check('URL設定済み：「オンラインカウンセリング」はふつうの予約案内に戻る', urlBot.planReply('オンラインカウンセリング').type === 'counseling');

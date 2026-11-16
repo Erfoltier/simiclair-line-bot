@@ -58,9 +58,10 @@ const ORDER_LOOKUP_GUIDE =
 // ゼオスキンの「カウンセリング前に購入する」方法（購入後カウンセリング）の案内（2026-11 オーナーの方針）
 const COUNSELING_FIRST_PURCHASE =
   '購入パスワードをお持ちでない方は、カート画面で「カウンセリング前に購入する」を選ぶと、先にご購入いただき、あとからカウンセリングを受けることもできます（3つの項目へのご同意が必要です）。\n' +
+  'この方法でのお支払いは、クレジットカード・Apple Pay・Google Pay・Shop Payのみです（銀行振込はご利用いただけません）。\n' +
   'ご注文から14日以内に、このトークでご注文番号を添えてカウンセリングをご予約ください。カウンセリングのあとに発送いたします。\n' +
   '・カウンセリングの結果ご購入いただけない場合は、ゼオスキンの代金を全額返金いたします。\n' +
-  '・14日以内にご予約がない場合や、お客様のご都合によるキャンセルの場合は、商品代金の5%（最低550円）を差し引いて返金いたします。';
+  '・14日以内にご予約がない場合や、お客様のご都合によるキャンセルの場合は、商品代金の3.6%＋500円を差し引いて返金いたします。';
 
 const EFFICACY_TEMPLATE =
   '製品の効果や使用感には個人差があり、特定の症状や肌状態に合うかどうかについては断定的にお答えできません。\n' +
@@ -151,7 +152,8 @@ const rules = [
     handle: () =>
       'お支払い方法は、クレジットカード、Apple Pay、Google Pay、Shop Pay、銀行振込（前払い）です。\n' +
       '銀行振込の振込先は、ご注文後の画面とメールでご案内します。ご注文日から7日以内にお振込みください（振込手数料はお客様のご負担です）。\n' +
-      '代金引換・後払い・コンビニ払い・PayPayは現在お取り扱いしておりません。',
+      '代金引換・後払い・コンビニ払い・PayPayは現在お取り扱いしておりません。\n' +
+      '※ゼオスキンをカウンセリング前に購入する場合は、銀行振込はご利用いただけません。',
   },
   {
     type: 'faq_subscription',
@@ -298,9 +300,19 @@ function validUrl(u) {
   return u && /^https:\/\/\S+$/.test(u.trim()) && u.trim().length <= 1000 ? u.trim() : null;
 }
 
+const COUNSELING_DURATION_NOTE =
+  'カウンセリングは10分程度です。時間内に終わらないご相談は、LINEで続きをお受けするか、次の枠をご予約いただきます。';
+
+// オンラインカウンセリング（LINEのビデオ通話）の事前準備
+const ONLINE_PREP =
+  '【オンラインカウンセリングの事前準備】\n' +
+  '・LINEアプリを最新版にしてください\n' +
+  '・通信の安定した明るい場所で、正面から顔が映るようにしてください\n' +
+  '・当日はご予約の時刻に、こちらからLINEの「通話リクエスト」をお送りします。トーク内の案内をタップして通話を開始してください（こちらから直接お電話をおかけすることはできません）';
+
 const ONLINE_MANUAL_MESSAGE =
   'オンラインカウンセリングのご予約を承ります。このトークに、\n①ご注文番号（ご注文済みの方）\n②ご希望の日時を3つ\n③お名前\nをお送りください。担当者から日時をご連絡します。\n' +
-  'オンラインカウンセリングはLINEのビデオ通話で行います。';
+  'オンラインカウンセリングはLINEのビデオ通話で行います。' + COUNSELING_DURATION_NOTE + '\n\n' + ONLINE_PREP;
 
 function counselingReply() {
   const lines = [
@@ -310,6 +322,9 @@ function counselingReply() {
     'カウンセリング前にご購入済みの方は、ご予約の際にご注文番号を添えてください。',
   ];
   if (!COUNSELING_FACE_URL) lines.push('対面カウンセリングをご希望の方は、このトークにご希望の日時をお送りください。担当者からご連絡します。');
+  if (COUNSELING_ONLINE_URL) lines.push('オンラインカウンセリングは、下のボタンの予約ページから空いている日時をお選びください。');
+  lines.push(COUNSELING_DURATION_NOTE);
+  if (COUNSELING_ONLINE_URL) lines.push('', ONLINE_PREP);
   const text = lines.join('\n');
 
   const actions = [];
@@ -319,7 +334,7 @@ function counselingReply() {
     : { type: 'message', label: 'オンライン（LINEビデオ）', text: ONLINE_COUNSELING_TEXT });
 
   const alt = ['カウンセリングのご予約方法', COUNSELING_FACE_URL ? `対面：${COUNSELING_FACE_URL}` : '対面：このトークでご希望の日時をお送りください',
-    COUNSELING_ONLINE_URL ? `オンライン：${COUNSELING_ONLINE_URL}` : 'オンライン：このトークで「オンラインカウンセリング」とお送りください',
+    COUNSELING_ONLINE_URL ? `オンライン：予約ページから空いている日時をお選びください ${COUNSELING_ONLINE_URL}` : 'オンライン：このトークで「オンラインカウンセリング」とお送りください',
     'ご購入済みの方はご注文番号を添えてください'].join('／');
 
   const template = {
