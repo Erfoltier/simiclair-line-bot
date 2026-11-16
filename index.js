@@ -301,6 +301,10 @@ const MENU_REPLIES = {
 const COUNSELING_FACE_URL = validUrl(process.env.COUNSELING_FACE_URL);
 const ONLINE_COUNSELING_PRODUCT_URL = 'https://simiclair.myshopify.com/products/online-counseling';
 const COUNSELING_FEE = COUNSELING_FEE_TEXT;
+// カウンセリングの事前アンケート（回答はストアのメールに届く。肌の写真は回答のあとLINEトークに送ってもらう）
+const COUNSELING_SURVEY_URL = 'https://simiclair.myshopify.com/pages/counseling-sheet';
+const COUNSELING_SURVEY_NOTE = `ご予約の前に、事前アンケート（3分ほど）にご回答ください：\n${COUNSELING_SURVEY_URL}`;
+const COUNSELING_SURVEY_FULL = COUNSELING_SURVEY_NOTE + '\n肌の写真は、ご回答のあとにこのトークへお送りください。';
 const COUNSELING_ORDERED_TEXT = 'カウンセリング予約（注文済み）';
 const COUNSELING_NEW_TEXT = 'カウンセリング予約（未購入）';
 
@@ -319,7 +323,9 @@ const ONLINE_PREP =
   '・当日はご予約の時刻に、こちらからLINEの「通話リクエスト」をお送りします。トーク内の案内をタップして通話を開始してください（こちらから直接お電話をおかけすることはできません）';
 
 const COUNSELING_ORDERED_MESSAGE =
-  'ゼオスキンをカウンセリング前にご購入いただいた方は、カウンセリングは無料です。このトークに、\n' +
+  'ゼオスキンをカウンセリング前にご購入いただいた方は、カウンセリングは無料です。\n' +
+  COUNSELING_SURVEY_FULL + '\n\n' +
+  'そのうえで、このトークに、\n' +
   '①ご注文番号\n②ご希望の方法（対面／オンライン）\n③ご希望の日時を3つ\n' +
   'をお送りください。担当者から日時をご連絡します。\n' +
   '対面カウンセリングは、いしだ皮フ科・美容皮膚科で行います。ご注文から14日以内にご予約ください。\n' +
@@ -331,6 +337,8 @@ function counselingNewMessage() {
     : '・対面（いしだ皮フ科・美容皮膚科）：お支払いはクリニックでお願いします。このトークに「対面希望」とご希望の日時を3つお送りください。';
   return [
     'まだご購入されていない方は、次の2つの方法からお選びいただけます。',
+    '',
+    COUNSELING_SURVEY_FULL,
     '',
     '【1】ゼオスキンを先に購入する（カウンセリング無料）',
     'カート画面で「カウンセリング前に購入する」を選んでご購入ください（3つの項目へのご同意が必要です）。',
@@ -353,7 +361,7 @@ function counselingReply() {
   const text =
     'カウンセリングのご予約を承ります。\n' +
     'ゼオスキンをカウンセリング前にご購入済みの方はカウンセリング無料、まだご購入されていない方は' +
-    `有料（${COUNSELING_FEE}）です。下のボタンから当てはまる方をお選びください。`;
+    `有料（${COUNSELING_FEE}）です。下のボタンから当てはまる方をお選びください。\n\n` + COUNSELING_SURVEY_NOTE;
   const template = {
     type: 'template',
     altText: 'カウンセリングのご予約：ご購入済みの方はこのトークで「' + COUNSELING_ORDERED_TEXT +
@@ -403,7 +411,8 @@ function isCounselingRequest(text, pending) {
 }
 const COUNSELING_REQUEST_RECEIVED =
   'カウンセリングのご予約内容を承りました。担当者が確認し、このトークで日時をご連絡します。\n' +
-  '（ご注文番号・ご希望の方法・ご希望の日時3つに漏れがあれば、続けてお送りください）';
+  '（ご注文番号・ご希望の方法・ご希望の日時3つに漏れがあれば、続けてお送りください）\n\n' +
+  'まだの方は、' + COUNSELING_SURVEY_NOTE.replace('ご予約の前に、', '') + '\n肌の写真は、ご回答のあとにこのトークへお送りください。';
 
 function matchMenu(text) {
   const key = text.normalize('NFKC').trim();

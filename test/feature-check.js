@@ -262,6 +262,10 @@ function check(name, ok, detail = '') {
   const late = await bot.respond('12/1に注文した商品はいつ届きますか', { now: onHours, userId: 'Unone', findOrder });
   check('予約と関係ない日付入りの質問は予約の受付にしない', late.type !== 'counseling_request', late.type);
   check('予約のキャンセルは注文トラブル（スタッフ対応）に回す', bot.planReply('カウンセリングの予約をキャンセルしたい').type === 'order_trouble');
+  const SURVEY = 'https://simiclair.myshopify.com/pages/counseling-sheet';
+  check('事前アンケートのURL：最初の2択・注文済み・未購入・予約受付のすべてに入る',
+    [cr.text, ord.text, newR.text, req1.text, bot.planReply('カウンセリング予約').messages[0].text].every((t) => t.includes(SURVEY) && t.includes('事前アンケート（3分ほど）')));
+  check('事前アンケート：注文済み・未購入・予約受付には肌の写真の送り方も入る', [ord.text, newR.text, req1.text].every((t) => t.includes('肌の写真は、ご回答のあとにこのトークへお送りください')));
   check('カウンセリングの返信に「医師」「診察」を使わない', !/医師|診察/.test(JSON.stringify(cr) + ord.text + newR.text + req1.text));
 
   const urlBot = loadBot({ COUNSELING_FACE_URL: 'https://example.com/face' });
