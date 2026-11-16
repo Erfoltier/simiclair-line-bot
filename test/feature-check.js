@@ -234,30 +234,41 @@ function check(name, ok, detail = '') {
     t.template.actions.length >= 1 && t.template.actions.length <= 4 && t.template.actions.every((a) => a.label.length <= 20);
   let cr = bot.planReply('カウンセリングを予約したい');
   let tp = tmplOf(cr);
-  check('URL未設定：説明文＋ボタン1つ（オンライン＝文字を送るボタン）', cr.type === 'counseling' && tp && tp.template.actions.length === 1 &&
-    tp.template.actions[0].type === 'message' && tp.template.actions[0].text === 'オンラインカウンセリング', JSON.stringify(tp));
-  check('URL未設定：対面はこのトークで希望日時を受け付ける案内', cr.messages[0].text.includes('このトークにご希望の日時をお送りください'), cr.messages[0].text);
-  check('URL未設定：予約ページの案内は出さず、10分程度の案内は出す', !cr.messages[0].text.includes('予約ページ') && cr.messages[0].text.includes('10分程度'), cr.messages[0].text);
-  check('ボタンの文字数などがLINEの上限内（未設定）', limitsOk(tp), JSON.stringify(tp));
-  check('メニュー「カウンセリング予約」も同じ案内', bot.planReply('カウンセリング予約').type === 'menu_counseling' && tmplOf(bot.planReply('カウンセリング予約')));
-  const man = await bot.respond('オンラインカウンセリング', { now: offHours, userId: 'Ucoun', findOrder });
-  check('「オンラインカウンセリング」（未設定時）：手動受付の案内＋スタッフ対応＋時間外の一文', man.type === 'counseling_online_manual' && man.staff && man.text.includes('LINEのビデオ通話') && man.text.includes(NOTE), man.text);
+  check('予約の案内：説明文＋「注文済み／未購入」の2択ボタン', cr.type === 'counseling' && tp && tp.template.actions.length === 2 &&
+    tp.template.actions.every((a) => a.type === 'message') &&
+    tp.template.actions[0].text === 'カウンセリング予約（注文済み）' && tp.template.actions[1].text === 'カウンセリング予約（未購入）', JSON.stringify(tp));
+  check('ボタンの文字数などがLINEの上限内', limitsOk(tp), JSON.stringify(tp));
+  check('メニュー「カウンセリング予約」も同じ2択', bot.planReply('カウンセリング予約').type === 'menu_counseling' && tmplOf(bot.planReply('カウンセリング予約')));
+  check('「オンラインカウンセリング」と送られても同じ2択', bot.planReply('オンラインカウンセリング').type === 'counseling');
+  const ord = await bot.respond('カウンセリング予約（注文済み）', { now: offHours, userId: 'Uord', findOrder });
+  check('注文済み：無料の案内＋スタッフ対応＋時間外の一文', ord.type === 'counseling_ordered' && ord.staff && ord.text.includes('無料') && ord.text.includes(NOTE), ord.text);
+  check('全角・半角のかっこの違いでも注文済みと分かる', bot.planReply('カウンセリング予約(注文済み)').type === 'counseling_ordered');
+  const req1 = await bot.respond('#1001 オンライン 12/1 10時、12/2 14時、12/3 11時', { now: onHours, userId: 'Uord', findOrder });
+  check('注文済みを選んだあと：注文番号と日時は配送状況の確認ではなく予約の受付（スタッフ対応）', req1.type === 'counseling_request' && req1.staff, req1.type);
+  const after = await bot.respond('#1001', { now: onHours, userId: 'Uord', findOrder });
+  check('受付のあとは元どおり：注文番号だけなら連絡先を聞く', after.type === 'order_need_contact', after.type);
+  const newR = await bot.respond('カウンセリング予約（未購入）', { now: offHours, userId: 'Unew', findOrder });
+  check('未購入：2つの方法の案内（スタッフ対応にはしない）', newR.type === 'counseling_new' && !newR.staff && newR.text.includes('【1】') && newR.text.includes('【2】'), newR.text);
+  check('未購入：対面フォーム未設定なら「このトークに『対面希望』」', newR.text.includes('「対面希望」'), newR.text);
+  const req2 = await bot.respond('対面希望です。12月3日 15時か12月5日 11時でお願いします', { now: onHours, userId: 'Unew', findOrder });
+  check('未購入を選んだあと：対面希望と日時は予約の受付', req2.type === 'counseling_request', req2.type);
+  const req3 = await bot.respond('#1050 カウンセリング希望 12/1 10時 12/2 10時 12/3 10時', { now: onHours, userId: 'Ulater', findOrder });
+  check('2択を選んでいなくても、注文番号＋予約の言葉＋日時なら予約の受付', req3.type === 'counseling_request', req3.type);
+  const look = await bot.respond('#1001 taro@example.com', { now: onHours, userId: 'Uord2', findOrder });
+  check('メールアドレスつきの注文番号は、ふつうに配送状況を確認する', look.type !== 'counseling_request', look.type);
+  const ordB = await bot.respond('カウンセリング予約（注文済み）', { now: onHours, userId: 'Uord3', findOrder });
+  const look2 = await bot.respond('#1001 taro@example.com', { now: onHours, userId: 'Uord3', findOrder });
+  check('注文済みを選んだあとでも、メールアドレスつきなら配送状況の確認', ordB.type === 'counseling_ordered' && look2.type !== 'counseling_request', look2.type);
+  const late = await bot.respond('12/1に注文した商品はいつ届きますか', { now: onHours, userId: 'Unone', findOrder });
+  check('予約と関係ない日付入りの質問は予約の受付にしない', late.type !== 'counseling_request', late.type);
   check('予約のキャンセルは注文トラブル（スタッフ対応）に回す', bot.planReply('カウンセリングの予約をキャンセルしたい').type === 'order_trouble');
-  check('「#1001 カウンセリング予約したい」は配送状況の確認ではなく予約の案内', (await bot.respond('#1001 カウンセリング予約したい', { now: onHours, userId: 'Uc2', findOrder })).type === 'counseling');
-  check('カウンセリングの返信に「医師」「診察」を使わない', !/医師|診察/.test(JSON.stringify(cr)) && !/医師|診察/.test(man.text));
+  check('カウンセリングの返信に「医師」「診察」を使わない', !/医師|診察/.test(JSON.stringify(cr) + ord.text + newR.text + req1.text));
 
-  const urlBot = loadBot({ COUNSELING_FACE_URL: 'https://example.com/face', COUNSELING_ONLINE_URL: 'https://example.com/online' });
-  cr = urlBot.planReply('カウンセリングを予約したい'); tp = tmplOf(cr);
-  check('URL設定済み：対面・オンラインの2つのリンクボタン', tp && tp.template.actions.length === 2 && tp.template.actions.every((a) => a.type === 'uri') &&
-    tp.template.actions[0].uri === 'https://example.com/face' && tp.template.actions[1].uri === 'https://example.com/online', JSON.stringify(tp));
-  check('URL設定済み：対面の「このトークで」案内は出さない', !cr.messages[0].text.includes('このトークにご希望の日時'), cr.messages[0].text);
-  check('URL設定済み：予約ページから空いている日時を選ぶ案内＋事前準備＋10分程度', cr.messages[0].text.includes('予約ページから空いている日時をお選びください') &&
-    cr.messages[0].text.includes('通話リクエスト') && cr.messages[0].text.includes('10分程度'), cr.messages[0].text);
-  check('ボタンの文字数などがLINEの上限内（設定済み）', limitsOk(tp), JSON.stringify(tp));
-  check('URL設定済み：代わりの文（altText）にURLが入る', tp.altText.includes('https://example.com/face') && tp.altText.includes('https://example.com/online'), tp.altText);
-  check('URL設定済み：「オンラインカウンセリング」はふつうの予約案内に戻る', urlBot.planReply('オンラインカウンセリング').type === 'counseling');
-  const badBot = loadBot({ COUNSELING_FACE_URL: 'http://insecure.example.com', COUNSELING_ONLINE_URL: 'not a url' });
-  check('https 以外のURLは使わない（未設定と同じ扱い）', tmplOf(badBot.planReply('カウンセリング予約')).template.actions.length === 1);
+  const urlBot = loadBot({ COUNSELING_FACE_URL: 'https://example.com/face' });
+  const newU = urlBot.planReply('カウンセリング予約（未購入）');
+  check('対面フォーム設定済み：未購入の案内にフォームのURL、「対面希望」の案内は出さない', newU.text.includes('https://example.com/face') && !newU.text.includes('「対面希望」'), newU.text);
+  const badBot = loadBot({ COUNSELING_FACE_URL: 'http://insecure.example.com' });
+  check('https 以外のURLは使わない（未設定と同じ扱い）', badBot.planReply('カウンセリング予約（未購入）').text.includes('「対面希望」'));
 
   const lineBot = loadBot();
   await lineBot.handleEvent({ type: 'message', replyToken: 'rt', source: { type: 'user', userId: 'Ux' }, message: { type: 'text', text: 'カウンセリング予約' }, webhookEventId: 'ev-c1', timestamp: Date.now() });

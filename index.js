@@ -16,7 +16,7 @@
 //   - スタッフ対応に回る返信には、営業時間外なら「翌営業日以降のご連絡」の一文を添える
 //   - 健康被害の連絡が来たら、スタッフのLINEグループ等へすぐ通知する（STAFF_NOTIFY_TO）
 //   - リッチメニューのボタン文言には、決まった返信を返す（MENU_REPLIES）
-//   - カウンセリング予約：対面・オンラインのボタンを返す（COUNSELING_FACE_URL / COUNSELING_ONLINE_URL）
+//   - カウンセリング予約：注文済み（無料）か未購入（有料3,300円）かをボタンで聞き、予約はこのトークで受け付ける（COUNSELING_FACE_URL）
 //   - 注文番号＋注文時のメールアドレス（または電話番号）が送られたら、Shopifyで配送状況を調べて返す
 //     （SHOPIFY_SHOP / SHOPIFY_CLIENT_ID / SHOPIFY_CLIENT_SECRET が設定されているときだけ動く）
 
@@ -56,10 +56,11 @@ const ORDER_LOOKUP_GUIDE =
   'ご注文済みの方は、ご注文番号とご注文時のメールアドレス（または電話番号）を1つのメッセージでお送りいただくと、配送状況を自動でお調べします。\n例：#1001 taro@example.com';
 
 // ゼオスキンの「カウンセリング前に購入する」方法（購入後カウンセリング）の案内（2026-11 オーナーの方針）
+const COUNSELING_FEE_TEXT = '3,300円';
 const COUNSELING_FIRST_PURCHASE =
   '購入パスワードをお持ちでない方は、カート画面で「カウンセリング前に購入する」を選ぶと、先にご購入いただき、あとからカウンセリングを受けることもできます（3つの項目へのご同意が必要です）。\n' +
   'この方法でのお支払いは、クレジットカード・Apple Pay・Google Pay・Shop Payのみです（銀行振込はご利用いただけません）。\n' +
-  'ご注文から14日以内に、このトークでご注文番号を添えてカウンセリングをご予約ください。カウンセリングのあとに発送いたします。\n' +
+  'この場合、カウンセリングは無料です。ご注文から14日以内に、このトークでご注文番号を添えてカウンセリングをご予約ください。カウンセリングのあとに発送いたします。\n' +
   '・カウンセリングの結果ご購入いただけない場合は、ゼオスキンの代金を全額返金いたします。\n' +
   '・14日以内にご予約がない場合や、お客様のご都合によるキャンセルの場合は、商品代金の3.6%＋500円を差し引いて返金いたします。';
 
@@ -80,7 +81,7 @@ const rules = [
     handle: () => HOLD_MESSAGE,
   },
 
-  // --- カウンセリング予約：ボタンで対面・オンラインを選んでもらう（返信は counselingReply()）。
+  // --- カウンセリング予約：ボタンで注文済みか未購入かを選んでもらう（返信は counselingReply()）。
   // 予約の取り消し・変更は、スタッフが個別に対応するため注文トラブルの受付に回す（unless）。
   {
     type: 'counseling',
@@ -100,6 +101,7 @@ const rules = [
       'ゼオスキン（ZO SKIN HEALTH）は医療機関専売品のため、カウンセリングを受けた方にのみ購入パスワードをお伝えしています。\n' +
       '購入パスワードはカート画面の「ご購入手続きへ」の上に入力してください。\n\n' +
       COUNSELING_FIRST_PURCHASE + '\n\n' +
+      `ご購入前にカウンセリングを受けたい方は、有料カウンセリング（${COUNSELING_FEE_TEXT}）をご利用いただけます。カウンセリングから30日以内にゼオスキンをご購入いただくと、${COUNSELING_FEE_TEXT}を商品代金から差し引きます。\n\n` +
       'カウンセリングのご予約は、メニューの「カウンセリング予約」からどうぞ。購入パスワードがご不明・入力できない場合は、このトークにその旨をお送りください。担当スタッフよりご連絡いたします。',
   },
 
@@ -285,16 +287,22 @@ const MENU_REPLIES = {
 };
 
 // ---------------------------------------------------------------------------
-// カウンセリング予約
-// 対面：クリニックのLINE予約申請フォーム（COUNSELING_FACE_URL）。未設定なら、このトークで希望日時を受け付ける。
-// オンライン：予約システム（COUNSELING_ONLINE_URL）。未設定なら、押すと「オンラインカウンセリング」が送られ、
-//   手動で受け付ける案内を返す（ONLINE_MANUAL_MESSAGE）。
+// カウンセリング予約（2026-11 オーナーの方針）
+// ・ゼオスキンを「カウンセリング前に購入する」で注文済みの方：カウンセリング無料
+// ・未購入の方：有料3,300円（対面・オンラインとも）。30日以内にゼオスキンを購入すると3,300円を商品代金から差し引く
+//   （カウンセリング後にスタッフが割引コードをLINEで送る）
+//   対面：クリニックで支払い、予約申請フォーム（COUNSELING_FACE_URL）から申し込み。未設定ならこのトークで受け付ける
+//   オンライン：Shopifyの商品「オンラインカウンセリング」を購入 → このトークで注文番号と希望日時3つ → スタッフが手入力で確定
+// 予約はすべてこのトークで受け、スタッフが確定する（顧客向けの予約画面はない）。
+// 「カウンセリング予約」には、まず注文済みか未購入かを2択のボタンで聞く。
 // LINEのボタンテンプレートの上限：ボタンの文字は20字、本文は見出しありで60字、代わりの文（altText）は400字。
 // ---------------------------------------------------------------------------
 
 const COUNSELING_FACE_URL = validUrl(process.env.COUNSELING_FACE_URL);
-const COUNSELING_ONLINE_URL = validUrl(process.env.COUNSELING_ONLINE_URL);
-const ONLINE_COUNSELING_TEXT = 'オンラインカウンセリング';
+const ONLINE_COUNSELING_PRODUCT_URL = 'https://simiclair.myshopify.com/products/online-counseling';
+const COUNSELING_FEE = COUNSELING_FEE_TEXT;
+const COUNSELING_ORDERED_TEXT = 'カウンセリング予約（注文済み）';
+const COUNSELING_NEW_TEXT = 'カウンセリング予約（未購入）';
 
 function validUrl(u) {
   return u && /^https:\/\/\S+$/.test(u.trim()) && u.trim().length <= 1000 ? u.trim() : null;
@@ -305,45 +313,97 @@ const COUNSELING_DURATION_NOTE =
 
 // オンラインカウンセリング（LINEのビデオ通話）の事前準備
 const ONLINE_PREP =
-  '【オンラインカウンセリングの事前準備】\n' +
+  '【オンラインカウンセリング（LINEのビデオ通話）の事前準備】\n' +
   '・LINEアプリを最新版にしてください\n' +
   '・通信の安定した明るい場所で、正面から顔が映るようにしてください\n' +
   '・当日はご予約の時刻に、こちらからLINEの「通話リクエスト」をお送りします。トーク内の案内をタップして通話を開始してください（こちらから直接お電話をおかけすることはできません）';
 
-const ONLINE_MANUAL_MESSAGE =
-  'オンラインカウンセリングのご予約を承ります。このトークに、\n①ご注文番号（ご注文済みの方）\n②ご希望の日時を3つ\n③お名前\nをお送りください。担当者から日時をご連絡します。\n' +
-  'オンラインカウンセリングはLINEのビデオ通話で行います。' + COUNSELING_DURATION_NOTE + '\n\n' + ONLINE_PREP;
+const COUNSELING_ORDERED_MESSAGE =
+  'ゼオスキンをカウンセリング前にご購入いただいた方は、カウンセリングは無料です。このトークに、\n' +
+  '①ご注文番号\n②ご希望の方法（対面／オンライン）\n③ご希望の日時を3つ\n' +
+  'をお送りください。担当者から日時をご連絡します。\n' +
+  '対面カウンセリングは、いしだ皮フ科・美容皮膚科で行います。ご注文から14日以内にご予約ください。\n' +
+  COUNSELING_DURATION_NOTE + '\n\n' + ONLINE_PREP;
 
+function counselingNewMessage() {
+  const face = COUNSELING_FACE_URL
+    ? `・対面（いしだ皮フ科・美容皮膚科）：お支払いはクリニックでお願いします。こちらの予約申請フォームからお申し込みください。\n${COUNSELING_FACE_URL}`
+    : '・対面（いしだ皮フ科・美容皮膚科）：お支払いはクリニックでお願いします。このトークに「対面希望」とご希望の日時を3つお送りください。';
+  return [
+    'まだご購入されていない方は、次の2つの方法からお選びいただけます。',
+    '',
+    '【1】ゼオスキンを先に購入する（カウンセリング無料）',
+    'カート画面で「カウンセリング前に購入する」を選んでご購入ください（3つの項目へのご同意が必要です）。',
+    '・ご注文から14日以内に、このトークでご注文番号を添えてカウンセリングをご予約ください。カウンセリングのあとに発送いたします',
+    '・カウンセリングの結果ご購入いただけない場合は、ゼオスキンの代金を全額返金いたします',
+    '・14日以内にご予約がない場合や、お客様のご都合によるキャンセルの場合は、商品代金の3.6%＋500円を差し引いて返金いたします',
+    '・お支払いはクレジットカード・Apple Pay・Google Pay・Shop Payのみです（銀行振込はご利用いただけません）',
+    '',
+    `【2】有料カウンセリング（${COUNSELING_FEE}）`,
+    `カウンセリングから30日以内にゼオスキンをご購入いただくと、${COUNSELING_FEE}を商品代金から差し引きます（カウンセリングのあとに、担当者から割引コードをこのトークでお送りします）。`,
+    `・オンライン（LINEのビデオ通話）：こちらの商品ページでお支払いのうえ（銀行振込はご利用いただけません）、このトークにご注文番号とご希望の日時を3つお送りください。\n${ONLINE_COUNSELING_PRODUCT_URL}`,
+    face,
+    '',
+    COUNSELING_DURATION_NOTE,
+  ].join('\n');
+}
+
+// 「カウンセリング予約」：まず注文済みか未購入かを聞く
 function counselingReply() {
-  const lines = [
-    'カウンセリングのご予約は、次の2つの方法からお選びいただけます。',
-    '・対面カウンセリング（いしだ皮フ科・美容皮膚科）',
-    '・オンラインカウンセリング（LINEのビデオ通話）',
-    'カウンセリング前にご購入済みの方は、ご予約の際にご注文番号を添えてください。',
-  ];
-  if (!COUNSELING_FACE_URL) lines.push('対面カウンセリングをご希望の方は、このトークにご希望の日時をお送りください。担当者からご連絡します。');
-  if (COUNSELING_ONLINE_URL) lines.push('オンラインカウンセリングは、下のボタンの予約ページから空いている日時をお選びください。');
-  lines.push(COUNSELING_DURATION_NOTE);
-  if (COUNSELING_ONLINE_URL) lines.push('', ONLINE_PREP);
-  const text = lines.join('\n');
-
-  const actions = [];
-  if (COUNSELING_FACE_URL) actions.push({ type: 'uri', label: '対面（いしだ皮フ科）', uri: COUNSELING_FACE_URL });
-  actions.push(COUNSELING_ONLINE_URL
-    ? { type: 'uri', label: 'オンライン（LINEビデオ）', uri: COUNSELING_ONLINE_URL }
-    : { type: 'message', label: 'オンライン（LINEビデオ）', text: ONLINE_COUNSELING_TEXT });
-
-  const alt = ['カウンセリングのご予約方法', COUNSELING_FACE_URL ? `対面：${COUNSELING_FACE_URL}` : '対面：このトークでご希望の日時をお送りください',
-    COUNSELING_ONLINE_URL ? `オンライン：予約ページから空いている日時をお選びください ${COUNSELING_ONLINE_URL}` : 'オンライン：このトークで「オンラインカウンセリング」とお送りください',
-    'ご購入済みの方はご注文番号を添えてください'].join('／');
-
+  const text =
+    'カウンセリングのご予約を承ります。\n' +
+    'ゼオスキンをカウンセリング前にご購入済みの方はカウンセリング無料、まだご購入されていない方は' +
+    `有料（${COUNSELING_FEE}）です。下のボタンから当てはまる方をお選びください。`;
   const template = {
     type: 'template',
-    altText: alt.slice(0, 400),
-    template: { type: 'buttons', title: 'カウンセリングのご予約', text: 'ご希望の方法を選んでください。', actions },
+    altText: 'カウンセリングのご予約：ご購入済みの方はこのトークで「' + COUNSELING_ORDERED_TEXT +
+      '」、まだの方は「' + COUNSELING_NEW_TEXT + '」とお送りください',
+    template: {
+      type: 'buttons', title: 'カウンセリングのご予約', text: 'ゼオスキンのご購入状況を選んでください。',
+      actions: [
+        { type: 'message', label: '注文済みの方（カウンセリング前に購入）', text: COUNSELING_ORDERED_TEXT },
+        { type: 'message', label: 'まだ購入していない方', text: COUNSELING_NEW_TEXT },
+      ],
+    },
   };
   return { type: 'counseling', text, messages: [{ type: 'text', text }, template] };
 }
+
+// 2択のボタンの返事（ボタンが送る文字と完全一致）
+function matchCounselingChoice(text) {
+  const key = text.normalize('NFKC').trim();
+  if (key === COUNSELING_ORDERED_TEXT.normalize('NFKC')) {
+    return { type: 'counseling_ordered', staff: true, text: COUNSELING_ORDERED_MESSAGE };
+  }
+  if (key === COUNSELING_NEW_TEXT.normalize('NFKC')) {
+    return { type: 'counseling_new', text: counselingNewMessage() };
+  }
+  return null;
+}
+
+// カウンセリングの予約内容（注文番号・希望日時）が送られてきたか。
+// 2択を選んだあと（30分以内）か、本文に予約らしい言葉がある場合に、日時か注文番号が入っていれば予約の申し込みとみなす。
+const COUNSELING_PENDING_MS = 30 * 60 * 1000;
+const pendingCounseling = new Map();
+function rememberCounseling(userId, sentAt) {
+  if (userId) pendingCounseling.set(userId, sentAt);
+}
+function counselingPending(userId, sentAt) {
+  const at = userId && pendingCounseling.get(userId);
+  return Boolean(at) && sentAt - at <= COUNSELING_PENDING_MS;
+}
+const DATE_LIKE = /\d{1,2}\s*[\/月]\s*\d{1,2}|\d{1,2}\s*(時|:\d{2})|[月火水木金土日]曜/;
+const COUNSELING_HINT = /カウンセリング|予約|希望|対面|オンライン/;
+function isCounselingRequest(text, pending) {
+  const t = text.normalize('NFKC');
+  const hasDate = DATE_LIKE.test(t);
+  const hasOrder = /#\s*\d{3,}|注文番号/.test(t);
+  if (pending) return hasDate || hasOrder;
+  return hasDate && COUNSELING_HINT.test(t);
+}
+const COUNSELING_REQUEST_RECEIVED =
+  'カウンセリングのご予約内容を承りました。担当者が確認し、このトークで日時をご連絡します。\n' +
+  '（ご注文番号・ご希望の方法・ご希望の日時3つに漏れがあれば、続けてお送りください）';
 
 function matchMenu(text) {
   const key = text.normalize('NFKC').trim();
@@ -594,9 +654,8 @@ function planReply(userText) {
   }
   const menu = matchMenu(userText);
   if (menu) return menu;
-  if (userText.normalize('NFKC').trim() === ONLINE_COUNSELING_TEXT && !COUNSELING_ONLINE_URL) {
-    return { type: 'counseling_online_manual', staff: true, text: ONLINE_MANUAL_MESSAGE };
-  }
+  const choice = matchCounselingChoice(userText);
+  if (choice) return choice;
   if (rule && rule.type === 'counseling') return counselingReply();
   if (!rule) return { type: 'fallback', staff: true, text: FALLBACK_MESSAGE };
   return { type: rule.type, staff: Boolean(rule.staff), notify: Boolean(rule.notify), text: rule.handle(userText) };
@@ -614,6 +673,17 @@ async function respond(userText, ctx = {}) {
   const now = ctx.now || new Date();
   const sentAt = ctx.sentAt || now.getTime();   // お客様が送った時刻（LINEの timestamp）
   let reply = planReply(userText);
+  if (reply.type === 'counseling_ordered' || reply.type === 'counseling_new') {
+    rememberCounseling(ctx.userId, sentAt);
+    return withHoursNote(reply, now);
+  }
+  // カウンセリングの予約内容（注文番号・希望日時）は、配送状況の確認ではなくスタッフに回す
+  const contactGiven = (() => { const p = parseOrderParts(userText); return Boolean(p.email || p.phone); })();
+  if (!contactGiven && ['fallback', 'counseling', 'faq_delivery_time', 'faq_password'].includes(reply.type) &&
+      isCounselingRequest(userText, counselingPending(ctx.userId, sentAt))) {
+    pendingCounseling.delete(ctx.userId);
+    return withHoursNote({ type: 'counseling_request', staff: true, text: COUNSELING_REQUEST_RECEIVED }, now);
+  }
   if (reply.type !== 'adverse_event' && orderLookupEnabledFor(ctx)) {
     const parts = parseOrderParts(userText);
     const hasContact = Boolean(parts.email || parts.phone);
