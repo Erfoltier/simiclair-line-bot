@@ -298,7 +298,10 @@ const MENU_REPLIES = {
 // LINEのボタンテンプレートの上限：ボタンの文字は20字、本文は見出しありで60字、代わりの文（altText）は400字。
 // ---------------------------------------------------------------------------
 
-const COUNSELING_FACE_URL = validUrl(process.env.COUNSELING_FACE_URL);
+// 対面カウンセリングの予約申請フォーム（いしだ皮フ科のLINE。?type=counseling でカウンセリング区分を選んだ状態で開く）。
+// 環境変数 COUNSELING_FACE_URL を https のURLにすると差し替え、none にするとフォームを案内せずこのトークで受け付ける。
+const DEFAULT_COUNSELING_FACE_URL = 'https://liff.line.me/2011370154-91Vm3JOa?type=counseling';
+const COUNSELING_FACE_URL = faceUrlFromEnv(process.env.COUNSELING_FACE_URL);
 const ONLINE_COUNSELING_PRODUCT_URL = 'https://simiclair.myshopify.com/products/online-counseling';
 const COUNSELING_FEE = COUNSELING_FEE_TEXT;
 // カウンセリングの事前アンケート（回答はストアのメールに届く。肌の写真は回答のあとLINEトークに送ってもらう）
@@ -307,6 +310,11 @@ const COUNSELING_SURVEY_NOTE = `ご予約の前に、事前アンケート（3�
 const COUNSELING_SURVEY_FULL = COUNSELING_SURVEY_NOTE + '\n肌の写真は、ご回答のあとにこのトークへお送りください。';
 const COUNSELING_ORDERED_TEXT = 'カウンセリング予約（注文済み）';
 const COUNSELING_NEW_TEXT = 'カウンセリング予約（未購入）';
+
+function faceUrlFromEnv(v) {
+  if (v && /^(none|off)$/i.test(v.trim())) return null;
+  return validUrl(v) || DEFAULT_COUNSELING_FACE_URL;
+}
 
 function validUrl(u) {
   return u && /^https:\/\/\S+$/.test(u.trim()) && u.trim().length <= 1000 ? u.trim() : null;

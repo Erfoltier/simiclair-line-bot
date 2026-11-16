@@ -249,7 +249,7 @@ function check(name, ok, detail = '') {
   check('受付のあとは元どおり：注文番号だけなら連絡先を聞く', after.type === 'order_need_contact', after.type);
   const newR = await bot.respond('カウンセリング予約（未購入）', { now: offHours, userId: 'Unew', findOrder });
   check('未購入：2つの方法の案内（スタッフ対応にはしない）', newR.type === 'counseling_new' && !newR.staff && newR.text.includes('【1】') && newR.text.includes('【2】'), newR.text);
-  check('未購入：対面フォーム未設定なら「このトークに『対面希望』」', newR.text.includes('「対面希望」'), newR.text);
+  check('未購入：対面は初期値の予約申請フォーム（いしだ皮フ科のLINE）を案内', newR.text.includes('https://liff.line.me/2011370154-91Vm3JOa?type=counseling') && !newR.text.includes('「対面希望」'), newR.text);
   const req2 = await bot.respond('対面希望です。12月3日 15時か12月5日 11時でお願いします', { now: onHours, userId: 'Unew', findOrder });
   check('未購入を選んだあと：対面希望と日時は予約の受付', req2.type === 'counseling_request', req2.type);
   const req3 = await bot.respond('#1050 カウンセリング希望 12/1 10時 12/2 10時 12/3 10時', { now: onHours, userId: 'Ulater', findOrder });
@@ -272,7 +272,9 @@ function check(name, ok, detail = '') {
   const newU = urlBot.planReply('カウンセリング予約（未購入）');
   check('対面フォーム設定済み：未購入の案内にフォームのURL、「対面希望」の案内は出さない', newU.text.includes('https://example.com/face') && !newU.text.includes('「対面希望」'), newU.text);
   const badBot = loadBot({ COUNSELING_FACE_URL: 'http://insecure.example.com' });
-  check('https 以外のURLは使わない（未設定と同じ扱い）', badBot.planReply('カウンセリング予約（未購入）').text.includes('「対面希望」'));
+  check('https 以外のURLは使わない（初期値のフォームを案内）', badBot.planReply('カウンセリング予約（未購入）').text.includes('https://liff.line.me/2011370154-91Vm3JOa?type=counseling'));
+  const offBot = loadBot({ COUNSELING_FACE_URL: 'none' });
+  check('COUNSELING_FACE_URL=none ならフォームを出さず「対面希望」をこのトークで受け付ける', offBot.planReply('カウンセリング予約（未購入）').text.includes('「対面希望」'));
 
   const lineBot = loadBot();
   await lineBot.handleEvent({ type: 'message', replyToken: 'rt', source: { type: 'user', userId: 'Ux' }, message: { type: 'text', text: 'カウンセリング予約' }, webhookEventId: 'ev-c1', timestamp: Date.now() });
