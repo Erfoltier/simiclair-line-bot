@@ -237,11 +237,11 @@ function check(name, ok, detail = '') {
   const GUIDE = 'https://simiclair.myshopify.com/pages/counseling';
   check('予約の案内：短い説明＋「案内ページ・事前シート・オンライン予約・対面予約」のボタン', cr.type === 'counseling' && tp && tp.template.actions.length === 4 &&
     tp.template.actions[0].uri === GUIDE && tp.template.actions[1].uri === 'https://simiclair.myshopify.com/pages/counseling-sheet' &&
-    tp.template.actions[2].type === 'message' && tp.template.actions[2].text === 'オンラインカウンセリングの予約' &&
+    tp.template.actions[2].type === 'uri' && tp.template.actions[2].uri === 'https://monshin.ishidahihuka.jp/cs/' &&
     tp.template.actions[3].uri === 'https://liff.line.me/2011370154-91Vm3JOa?type=counseling', JSON.stringify(tp));
   check('最初の説明文は短い（120字以内）', cr.text.length <= 120, String(cr.text.length));
   const onl = await bot.respond('オンラインカウンセリングの予約', { now: onHours, userId: 'Uonl', findOrder });
-  check('「オンラインの予約」ボタン：注文番号と日時の受付、スタッフ対応', onl.type === 'counseling_online' && onl.staff && onl.text.includes('ご注文番号') && onl.text.includes(GUIDE), onl.text);
+  check('「オンラインカウンセリングの予約」と送られたら予約ページを案内', onl.type === 'counseling_online' && onl.text.includes('https://monshin.ishidahihuka.jp/cs/') && onl.text.includes(GUIDE), onl.text);
   const onlReq = await bot.respond('#1002 11/20 14:00でお願いします', { now: onHours, userId: 'Uonl', findOrder });
   check('オンライン予約のあとに届いた日時は予約の受付', onlReq.type === 'counseling_request', onlReq.type);
   check('ボタンの文字数などがLINEの上限内', limitsOk(tp), JSON.stringify(tp));
