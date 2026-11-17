@@ -322,6 +322,8 @@ const COUNSELING_SURVEY_FULL = COUNSELING_SURVEY_NOTE;
 // カウンセリングの案内ページ（料金・受け方・予約をまとめたページ。LINEの返信は短くしてここへ誘導する）
 const COUNSELING_GUIDE_URL = 'https://simiclair.myshopify.com/pages/counseling';
 const COUNSELING_ONLINE_TEXT = 'オンラインカウンセリングの予約';
+// オンラインカウンセリングの空き枠予約ページ（LANE RESERVE。店が開放した日時の空き15分枠から選ぶ）
+const COUNSELING_ONLINE_BOOKING_URL = 'https://monshin.ishidahihuka.jp/cs/';
 const COUNSELING_ORDERED_TEXT = 'カウンセリング予約（注文済み）';
 const COUNSELING_NEW_TEXT = 'カウンセリング予約（未購入）';
 
@@ -392,7 +394,7 @@ function counselingReply() {
       actions: [
         { type: 'uri', label: 'ご案内・料金を見る', uri: COUNSELING_GUIDE_URL },
         { type: 'uri', label: '事前シートを入力（必須）', uri: COUNSELING_SURVEY_URL },
-        { type: 'message', label: 'オンラインの予約', text: COUNSELING_ONLINE_TEXT },
+        { type: 'uri', label: 'オンラインの予約', uri: COUNSELING_ONLINE_BOOKING_URL },
         { type: 'uri', label: '対面の予約', uri: COUNSELING_FACE_URL || COUNSELING_GUIDE_URL },
       ],
     },
@@ -402,8 +404,8 @@ function counselingReply() {
 
 // オンラインカウンセリングの予約（空き枠を選ぶ予約ページができるまでは、このトークで受け付ける）
 const COUNSELING_ONLINE_MESSAGE =
-  'オンラインカウンセリング（LINEのビデオ通話・10分程度）のご予約を承ります。\n' +
-  'このトークに、ご注文番号（ご購入済みの方）と、ご希望の日時をお送りください。担当者から日時をご連絡します。\n' +
+  'オンラインカウンセリング（LINEのビデオ通話・10分程度）は、予約ページで空いている日時を選んでご予約ください。その場で予約が確定し、確認のメールが届きます。\n' +
+  COUNSELING_ONLINE_BOOKING_URL + '\n' +
   'まだご購入されていない方は、料金（3,300円）のお支払い方法を案内ページでご確認ください。\n' +
   COUNSELING_GUIDE_URL;
 
