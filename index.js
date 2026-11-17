@@ -304,7 +304,7 @@ const DEFAULT_COUNSELING_FACE_URL = 'https://liff.line.me/2011370154-91Vm3JOa?ty
 const COUNSELING_FACE_URL = faceUrlFromEnv(process.env.COUNSELING_FACE_URL);
 const ONLINE_COUNSELING_PRODUCT_URL = 'https://simiclair.myshopify.com/products/online-counseling';
 const COUNSELING_FEE = COUNSELING_FEE_TEXT;
-// 事前カウンセリングシート（入力必須。回答はストアのメールに届く。肌の写真は回答のあとLINEトークに送ってもらう）
+// 事前カウンセリングシート（入力必須。回答はストアのメールに届く。オンラインはビデオ通話で肌を見るので写真は求めない）
 const COUNSELING_SURVEY_URL = 'https://simiclair.myshopify.com/pages/counseling-sheet';
 const COUNSELING_SURVEY_NOTE = `ご予約の前に、事前カウンセリングシート（入力必須・3分ほど）をご入力ください：\n${COUNSELING_SURVEY_URL}`;
 // 事前カウンセリングシートのカード（白い枠のボタンで目立たせる。2択のボタンより先に出す）
@@ -318,7 +318,10 @@ const COUNSELING_SHEET_CARD = {
     actions: [{ type: 'uri', label: 'シートを入力する', uri: COUNSELING_SURVEY_URL }],
   },
 };
-const COUNSELING_SURVEY_FULL = COUNSELING_SURVEY_NOTE + '\n肌の写真は、ご入力のあとにこのトークへお送りください。';
+const COUNSELING_SURVEY_FULL = COUNSELING_SURVEY_NOTE;
+// カウンセリングの案内ページ（料金・受け方・予約をまとめたページ。LINEの返信は短くしてここへ誘導する）
+const COUNSELING_GUIDE_URL = 'https://simiclair.myshopify.com/pages/counseling';
+const COUNSELING_ONLINE_TEXT = 'オンラインカウンセリングの予約';
 const COUNSELING_ORDERED_TEXT = 'カウンセリング予約（注文済み）';
 const COUNSELING_NEW_TEXT = 'カウンセリング予約（未購入）';
 
@@ -375,30 +378,41 @@ function counselingNewMessage() {
   ].join('\n');
 }
 
-// 「カウンセリング予約」：まず注文済みか未購入かを聞く
+// 「カウンセリング予約」：短い説明と、案内ページ・事前シート・オンライン予約のボタンを返す
 function counselingReply() {
   const text =
-    'カウンセリングのご予約を承ります。\n' +
-    'ゼオスキンをカウンセリング前にご購入済みの方はカウンセリング無料、まだご購入されていない方は' +
-    `有料（${COUNSELING_FEE}）です。下のボタンから当てはまる方をお選びください。\n\n` + COUNSELING_SURVEY_NOTE;
+    'カウンセリングの料金・受け方・ご予約方法は、案内ページにまとめています。\n' +
+    'ご予約の前に、事前カウンセリングシート（入力必須）をご入力ください。\n' +
+    COUNSELING_GUIDE_URL;
   const template = {
     type: 'template',
-    altText: 'カウンセリングのご予約：ご購入済みの方はこのトークで「' + COUNSELING_ORDERED_TEXT +
-      '」、まだの方は「' + COUNSELING_NEW_TEXT + '」とお送りください',
+    altText: `カウンセリングのご案内：${COUNSELING_GUIDE_URL} ／ 事前カウンセリングシート（入力必須）：${COUNSELING_SURVEY_URL}`,
     template: {
-      type: 'buttons', title: 'カウンセリングのご予約', text: 'ゼオスキンのご購入状況を選んでください。',
+      type: 'buttons', title: 'カウンセリングのご予約', text: '① 案内を見る ② シートを入力 ③ ご予約',
       actions: [
-        { type: 'message', label: '注文済みの方（カウンセリング前に購入）', text: COUNSELING_ORDERED_TEXT },
-        { type: 'message', label: 'まだ購入していない方', text: COUNSELING_NEW_TEXT },
+        { type: 'uri', label: 'ご案内・料金を見る', uri: COUNSELING_GUIDE_URL },
+        { type: 'uri', label: '事前シートを入力（必須）', uri: COUNSELING_SURVEY_URL },
+        { type: 'message', label: 'オンラインの予約', text: COUNSELING_ONLINE_TEXT },
+        { type: 'uri', label: '対面の予約', uri: COUNSELING_FACE_URL || COUNSELING_GUIDE_URL },
       ],
     },
   };
-  return { type: 'counseling', text, messages: [{ type: 'text', text }, COUNSELING_SHEET_CARD, template] };
+  return { type: 'counseling', text, messages: [{ type: 'text', text }, template] };
 }
+
+// オンラインカウンセリングの予約（空き枠を選ぶ予約ページができるまでは、このトークで受け付ける）
+const COUNSELING_ONLINE_MESSAGE =
+  'オンラインカウンセリング（LINEのビデオ通話・10分程度）のご予約を承ります。\n' +
+  'このトークに、ご注文番号（ご購入済みの方）と、ご希望の日時をお送りください。担当者から日時をご連絡します。\n' +
+  'まだご購入されていない方は、料金（3,300円）のお支払い方法を案内ページでご確認ください。\n' +
+  COUNSELING_GUIDE_URL;
 
 // 2択のボタンの返事（ボタンが送る文字と完全一致）
 function matchCounselingChoice(text) {
   const key = text.normalize('NFKC').trim();
+  if (key === COUNSELING_ONLINE_TEXT.normalize('NFKC')) {
+    return { type: 'counseling_online', staff: true, text: COUNSELING_ONLINE_MESSAGE, messages: [{ type: 'text', text: COUNSELING_ONLINE_MESSAGE }, COUNSELING_SHEET_CARD] };
+  }
   if (key === COUNSELING_ORDERED_TEXT.normalize('NFKC')) {
     return { type: 'counseling_ordered', staff: true, text: COUNSELING_ORDERED_MESSAGE, messages: [{ type: 'text', text: COUNSELING_ORDERED_MESSAGE }, COUNSELING_SHEET_CARD] };
   }
@@ -432,7 +446,7 @@ function isCounselingRequest(text, pending) {
 const COUNSELING_REQUEST_RECEIVED =
   'カウンセリングのご予約内容を承りました。担当者が確認し、このトークで日時をご連絡します。\n' +
   '（ご注文番号・ご希望の方法・ご希望の日時3つに漏れがあれば、続けてお送りください）\n\n' +
-  'まだの方は、' + COUNSELING_SURVEY_NOTE.replace('ご予約の前に、', '') + '\n肌の写真は、ご入力のあとにこのトークへお送りください。';
+  'まだの方は、' + COUNSELING_SURVEY_NOTE.replace('ご予約の前に、', '');
 
 function matchMenu(text) {
   const key = text.normalize('NFKC').trim();
@@ -702,7 +716,7 @@ async function respond(userText, ctx = {}) {
   const now = ctx.now || new Date();
   const sentAt = ctx.sentAt || now.getTime();   // お客様が送った時刻（LINEの timestamp）
   let reply = planReply(userText);
-  if (reply.type === 'counseling_ordered' || reply.type === 'counseling_new') {
+  if (reply.type === 'counseling_ordered' || reply.type === 'counseling_new' || reply.type === 'counseling_online') {
     rememberCounseling(ctx.userId, sentAt);
     return withHoursNote(reply, now);
   }
