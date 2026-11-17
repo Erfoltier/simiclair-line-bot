@@ -234,12 +234,19 @@ function check(name, ok, detail = '') {
     t.template.actions.length >= 1 && t.template.actions.length <= 4 && t.template.actions.every((a) => a.label.length <= 20);
   let cr = bot.planReply('カウンセリングを予約したい');
   let tp = tmplOf(cr);
-  check('予約の案内：説明文＋「注文済み／未購入」の2択ボタン', cr.type === 'counseling' && tp && tp.template.actions.length === 2 &&
-    tp.template.actions.every((a) => a.type === 'message') &&
-    tp.template.actions[0].text === 'カウンセリング予約（注文済み）' && tp.template.actions[1].text === 'カウンセリング予約（未購入）', JSON.stringify(tp));
+  const GUIDE = 'https://simiclair.myshopify.com/pages/counseling';
+  check('予約の案内：短い説明＋「案内ページ・事前シート・オンライン予約・対面予約」のボタン', cr.type === 'counseling' && tp && tp.template.actions.length === 4 &&
+    tp.template.actions[0].uri === GUIDE && tp.template.actions[1].uri === 'https://simiclair.myshopify.com/pages/counseling-sheet' &&
+    tp.template.actions[2].type === 'message' && tp.template.actions[2].text === 'オンラインカウンセリングの予約' &&
+    tp.template.actions[3].uri === 'https://liff.line.me/2011370154-91Vm3JOa?type=counseling', JSON.stringify(tp));
+  check('最初の説明文は短い（120字以内）', cr.text.length <= 120, String(cr.text.length));
+  const onl = await bot.respond('オンラインカウンセリングの予約', { now: onHours, userId: 'Uonl', findOrder });
+  check('「オンラインの予約」ボタン：注文番号と日時の受付、スタッフ対応', onl.type === 'counseling_online' && onl.staff && onl.text.includes('ご注文番号') && onl.text.includes(GUIDE), onl.text);
+  const onlReq = await bot.respond('#1002 11/20 14:00でお願いします', { now: onHours, userId: 'Uonl', findOrder });
+  check('オンライン予約のあとに届いた日時は予約の受付', onlReq.type === 'counseling_request', onlReq.type);
   check('ボタンの文字数などがLINEの上限内', limitsOk(tp), JSON.stringify(tp));
-  check('メニュー「カウンセリング予約」も同じ2択', bot.planReply('カウンセリング予約').type === 'menu_counseling' && tmplOf(bot.planReply('カウンセリング予約')));
-  check('「オンラインカウンセリング」と送られても同じ2択', bot.planReply('オンラインカウンセリング').type === 'counseling');
+  check('メニュー「カウンセリング予約」も同じボタン', bot.planReply('カウンセリング予約').type === 'menu_counseling' && tmplOf(bot.planReply('カウンセリング予約')));
+  check('「オンラインカウンセリング」と送られても同じ案内', bot.planReply('オンラインカウンセリング').type === 'counseling');
   const ord = await bot.respond('カウンセリング予約（注文済み）', { now: offHours, userId: 'Uord', findOrder });
   check('注文済み：無料の案内＋スタッフ対応＋時間外の一文', ord.type === 'counseling_ordered' && ord.staff && ord.text.includes('無料') && ord.text.includes(NOTE), ord.text);
   check('全角・半角のかっこの違いでも注文済みと分かる', bot.planReply('カウンセリング予約(注文済み)').type === 'counseling_ordered');
@@ -263,15 +270,15 @@ function check(name, ok, detail = '') {
   check('予約と関係ない日付入りの質問は予約の受付にしない', late.type !== 'counseling_request', late.type);
   check('予約のキャンセルは注文トラブル（スタッフ対応）に回す', bot.planReply('カウンセリングの予約をキャンセルしたい').type === 'order_trouble');
   const SURVEY = 'https://simiclair.myshopify.com/pages/counseling-sheet';
-  check('事前カウンセリングシートのURL：最初の2択・注文済み・未購入・予約受付のすべてに入る',
-    [cr.text, ord.text, newR.text, req1.text, bot.planReply('カウンセリング予約').messages[0].text].every((t) => t.includes(SURVEY) && t.includes('事前カウンセリングシート（入力必須')));
+  check('事前カウンセリングシート：最初の案内・注文済み・未購入・予約受付のすべてで案内',
+    [ord.text, newR.text, req1.text].every((t) => t.includes(SURVEY) && t.includes('事前カウンセリングシート（入力必須')) && cr.text.includes('事前カウンセリングシート（入力必須）'));
   const isSheetCard = (m) => m && m.type === 'template' && m.template.title === '事前カウンセリングシート（入力必須）' &&
     m.template.actions.length === 1 && m.template.actions[0].type === 'uri' && m.template.actions[0].uri === SURVEY;
   const firstMsgs = bot.planReply('カウンセリング予約').messages;
-  check('最初の返信：説明文 → シートのカード → 2択のボタン の順', firstMsgs.length === 3 && firstMsgs[0].type === 'text' && isSheetCard(firstMsgs[1]) && firstMsgs[2].template.type === 'buttons' && firstMsgs[2].template.actions.length === 2, JSON.stringify(firstMsgs.map((m) => m.type)));
-  check('注文済み・未購入の返信にもシートのカードが付く', [ord, newR].every((r) => r.messages && r.messages.length === 2 && r.messages[0].type === 'text' && isSheetCard(r.messages[1])));
-  check('シートのカード：LINEの上限（タイトル40字・本文60字・ボタン20字）以内', [firstMsgs[1]].every((m) => m.template.title.length <= 40 && m.template.text.length <= 60 && m.template.actions[0].label.length <= 20));
-  check('事前カウンセリングシート：注文済み・未購入・予約受付には肌の写真の送り方も入る', [ord.text, newR.text, req1.text].every((t) => t.includes('肌の写真は、ご入力のあとにこのトークへお送りください')));
+  check('最初の返信：短い説明文 → ボタンのカード の2通', firstMsgs.length === 2 && firstMsgs[0].type === 'text' && firstMsgs[1].template.type === 'buttons', JSON.stringify(firstMsgs.map((m) => m.type)));
+  check('注文済み・未購入・オンライン予約の返信にシートのカードが付く', [ord, newR, onl].every((r) => r.messages && r.messages.length === 2 && r.messages[0].type === 'text' && isSheetCard(r.messages[1])));
+  check('カードがLINEの上限（タイトル40字・本文60字・ボタン20字）以内', [firstMsgs[1], ord.messages[1]].every((m) => m.template.title.length <= 40 && m.template.text.length <= 60 && m.template.actions.every((a) => a.label.length <= 20)));
+  check('ビデオ通話で肌を見るので、肌の写真は求めない', ![cr.text, ord.text, newR.text, req1.text, onl.text].some((t) => t.includes('肌の写真')));
   check('カウンセリングの返信に「医師」「診察」を使わない', !/医師|診察/.test(JSON.stringify(cr) + ord.text + newR.text + req1.text));
 
   const urlBot = loadBot({ COUNSELING_FACE_URL: 'https://example.com/face' });
@@ -285,7 +292,7 @@ function check(name, ok, detail = '') {
   const lineBot = loadBot();
   await lineBot.handleEvent({ type: 'message', replyToken: 'rt', source: { type: 'user', userId: 'Ux' }, message: { type: 'text', text: 'カウンセリング予約' }, webhookEventId: 'ev-c1', timestamp: Date.now() });
   const sentMsgs = lineBot.sent.replies[0] && lineBot.sent.replies[0].messages;
-  check('LINEには説明文・シートのカード・2択ボタンの3通をまとめて返す', sentMsgs && sentMsgs.length === 3 && sentMsgs[0].type === 'text' && sentMsgs[1].type === 'template' && sentMsgs[2].type === 'template', JSON.stringify(sentMsgs));
+  check('LINEには短い説明文とボタンのカードの2通をまとめて返す', sentMsgs && sentMsgs.length === 2 && sentMsgs[0].type === 'text' && sentMsgs[1].type === 'template', JSON.stringify(sentMsgs));
 
   // --- Webhookの再送：同じイベントが2回届いても1回だけ処理する ---
   const dupBot = loadBot({ STAFF_NOTIFY_TO: 'Cstaff' });
