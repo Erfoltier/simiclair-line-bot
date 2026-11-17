@@ -95,7 +95,7 @@ LINE公式アカウントマネージャーの「リッチメニュー」→「�
 - 対面の予約申請フォームは初期値で `https://liff.line.me/2011370154-91Vm3JOa?type=counseling`（いしだ皮フ科のLINE、カウンセリング区分を選んだ状態で開く）。Renderの環境変数 `COUNSELING_FACE_URL` に `https://` のURLを入れると差し替え、`none` にするとフォームを案内せず「対面希望」をこのトークで受け付ける
 - 購入パスワードの返信には、カウンセリング前の購入の条件を載せている：カートで3項目に同意／この場合カウンセリング無料／注文から14日以内にご注文番号を添えて予約／カウンセリング後に発送／購入できない結果なら全額返金／14日以内に予約がない・お客様都合のキャンセルは商品代金の3.6%＋500円を差し引いて返金／お支払いはクレジットカード・Apple Pay・Google Pay・Shop Payのみ（銀行振込は不可。支払い方法の返信にも注記あり）。あわせて有料カウンセリング（3,300円、30日以内の購入で差し引き）も案内する。
   条件を変えるときは `index.js` の `COUNSELING_FIRST_PURCHASE`・`counselingNewMessage()`・`COUNSELING_FEE_TEXT` を、Shopify のカート・ポリシーと同時に直す
-- 事前アンケート https://simiclair.myshopify.com/pages/counseling-sheet （回答はストアのメールに届く）を、最初の2択・注文済み・未購入・予約受付のすべての返信で案内する。肌の写真は回答のあとにLINEトークへ送ってもらう（URLは `index.js` の `COUNSELING_SURVEY_URL`）
+- 事前カウンセリングシート（入力必須） https://simiclair.myshopify.com/pages/counseling-sheet （回答はストアのメールに届く）を、最初の2択・注文済み・未購入・予約受付のすべての返信で案内する。最初の返信・注文済み・未購入では、白いカード（ボタン「シートを入力する」）でも出して目立たせる。肌の写真は入力のあとにLINEトークへ送ってもらう（URLは `index.js` の `COUNSELING_SURVEY_URL`）
 - 予約のキャンセル・変更は、注文トラブルとしてスタッフ対応に回す
 
 ### 配送状況の自動確認の設定（Shopify）

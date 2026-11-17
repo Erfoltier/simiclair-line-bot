@@ -304,10 +304,21 @@ const DEFAULT_COUNSELING_FACE_URL = 'https://liff.line.me/2011370154-91Vm3JOa?ty
 const COUNSELING_FACE_URL = faceUrlFromEnv(process.env.COUNSELING_FACE_URL);
 const ONLINE_COUNSELING_PRODUCT_URL = 'https://simiclair.myshopify.com/products/online-counseling';
 const COUNSELING_FEE = COUNSELING_FEE_TEXT;
-// カウンセリングの事前アンケート（回答はストアのメールに届く。肌の写真は回答のあとLINEトークに送ってもらう）
+// 事前カウンセリングシート（入力必須。回答はストアのメールに届く。肌の写真は回答のあとLINEトークに送ってもらう）
 const COUNSELING_SURVEY_URL = 'https://simiclair.myshopify.com/pages/counseling-sheet';
-const COUNSELING_SURVEY_NOTE = `ご予約の前に、事前アンケート（3分ほど）にご回答ください：\n${COUNSELING_SURVEY_URL}`;
-const COUNSELING_SURVEY_FULL = COUNSELING_SURVEY_NOTE + '\n肌の写真は、ご回答のあとにこのトークへお送りください。';
+const COUNSELING_SURVEY_NOTE = `ご予約の前に、事前カウンセリングシート（入力必須・3分ほど）をご入力ください：\n${COUNSELING_SURVEY_URL}`;
+// 事前カウンセリングシートのカード（白い枠のボタンで目立たせる。2択のボタンより先に出す）
+const COUNSELING_SHEET_CARD = {
+  type: 'template',
+  altText: `事前カウンセリングシート（入力必須）：${COUNSELING_SURVEY_URL}`,
+  template: {
+    type: 'buttons',
+    title: '事前カウンセリングシート（入力必須）',
+    text: 'ご予約の前に、必ずご入力ください（3分ほど）。',
+    actions: [{ type: 'uri', label: 'シートを入力する', uri: COUNSELING_SURVEY_URL }],
+  },
+};
+const COUNSELING_SURVEY_FULL = COUNSELING_SURVEY_NOTE + '\n肌の写真は、ご入力のあとにこのトークへお送りください。';
 const COUNSELING_ORDERED_TEXT = 'カウンセリング予約（注文済み）';
 const COUNSELING_NEW_TEXT = 'カウンセリング予約（未購入）';
 
@@ -382,17 +393,18 @@ function counselingReply() {
       ],
     },
   };
-  return { type: 'counseling', text, messages: [{ type: 'text', text }, template] };
+  return { type: 'counseling', text, messages: [{ type: 'text', text }, COUNSELING_SHEET_CARD, template] };
 }
 
 // 2択のボタンの返事（ボタンが送る文字と完全一致）
 function matchCounselingChoice(text) {
   const key = text.normalize('NFKC').trim();
   if (key === COUNSELING_ORDERED_TEXT.normalize('NFKC')) {
-    return { type: 'counseling_ordered', staff: true, text: COUNSELING_ORDERED_MESSAGE };
+    return { type: 'counseling_ordered', staff: true, text: COUNSELING_ORDERED_MESSAGE, messages: [{ type: 'text', text: COUNSELING_ORDERED_MESSAGE }, COUNSELING_SHEET_CARD] };
   }
   if (key === COUNSELING_NEW_TEXT.normalize('NFKC')) {
-    return { type: 'counseling_new', text: counselingNewMessage() };
+    const text = counselingNewMessage();
+    return { type: 'counseling_new', text, messages: [{ type: 'text', text }, COUNSELING_SHEET_CARD] };
   }
   return null;
 }
@@ -420,7 +432,7 @@ function isCounselingRequest(text, pending) {
 const COUNSELING_REQUEST_RECEIVED =
   'カウンセリングのご予約内容を承りました。担当者が確認し、このトークで日時をご連絡します。\n' +
   '（ご注文番号・ご希望の方法・ご希望の日時3つに漏れがあれば、続けてお送りください）\n\n' +
-  'まだの方は、' + COUNSELING_SURVEY_NOTE.replace('ご予約の前に、', '') + '\n肌の写真は、ご回答のあとにこのトークへお送りください。';
+  'まだの方は、' + COUNSELING_SURVEY_NOTE.replace('ご予約の前に、', '') + '\n肌の写真は、ご入力のあとにこのトークへお送りください。';
 
 function matchMenu(text) {
   const key = text.normalize('NFKC').trim();
