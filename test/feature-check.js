@@ -235,10 +235,11 @@ function check(name, ok, detail = '') {
   let cr = bot.planReply('カウンセリングを予約したい');
   let tp = tmplOf(cr);
   const GUIDE = 'https://simiclair.myshopify.com/pages/counseling';
-  check('予約の案内：短い説明＋「案内ページ・事前シート・オンライン予約・対面予約」のボタン', cr.type === 'counseling' && tp && tp.template.actions.length === 4 &&
-    tp.template.actions[0].uri === GUIDE && tp.template.actions[1].uri === 'https://simiclair.myshopify.com/pages/counseling-sheet' &&
-    tp.template.actions[2].type === 'uri' && tp.template.actions[2].uri === 'https://monshin.ishidahihuka.jp/cs/' &&
-    tp.template.actions[3].uri === 'https://liff.line.me/2011370154-91Vm3JOa?type=counseling', JSON.stringify(tp));
+  check('予約の案内：最初のボタンは事前シート（送信後の画面から予約）、次に案内ページ', cr.type === 'counseling' && tp && tp.template.actions.length === 2 &&
+    tp.template.actions[0].uri === 'https://simiclair.myshopify.com/pages/counseling-sheet' && tp.template.actions[0].label === 'シートを入力して予約へ' &&
+    tp.template.actions[1].uri === GUIDE && cr.text.includes('送信後の画面から'), JSON.stringify(tp));
+  check('予約の案内：予約ページ・対面フォームへ直接は飛ばさない（シートを先に入力してもらう）',
+    !JSON.stringify(tp.template.actions).includes('monshin') && !JSON.stringify(tp.template.actions).includes('liff.line.me'));
   check('最初の説明文は短い（120字以内）', cr.text.length <= 120, String(cr.text.length));
   const onl = await bot.respond('オンラインカウンセリングの予約', { now: onHours, userId: 'Uonl', findOrder });
   check('「オンラインカウンセリングの予約」と送られたら予約ページを案内', onl.type === 'counseling_online' && onl.text.includes('https://monshin.ishidahihuka.jp/cs/') && onl.text.includes(GUIDE), onl.text);
@@ -271,7 +272,7 @@ function check(name, ok, detail = '') {
   check('予約のキャンセルは注文トラブル（スタッフ対応）に回す', bot.planReply('カウンセリングの予約をキャンセルしたい').type === 'order_trouble');
   const SURVEY = 'https://simiclair.myshopify.com/pages/counseling-sheet';
   check('事前カウンセリングシート：最初の案内・注文済み・未購入・予約受付のすべてで案内',
-    [ord.text, newR.text, req1.text].every((t) => t.includes(SURVEY) && t.includes('事前カウンセリングシート（入力必須')) && cr.text.includes('事前カウンセリングシート（入力必須）'));
+    [ord.text, newR.text, req1.text].every((t) => t.includes(SURVEY) && t.includes('事前カウンセリングシート（入力必須')) && cr.text.includes('事前カウンセリングシート（入力必須') && JSON.stringify(cr.messages).includes(SURVEY));
   const isSheetCard = (m) => m && m.type === 'template' && m.template.title === '事前カウンセリングシート（入力必須）' &&
     m.template.actions.length === 1 && m.template.actions[0].type === 'uri' && m.template.actions[0].uri === SURVEY;
   const firstMsgs = bot.planReply('カウンセリング予約').messages;
