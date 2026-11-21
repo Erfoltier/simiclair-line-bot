@@ -381,23 +381,21 @@ function counselingNewMessage() {
   ].join('\n');
 }
 
-// 「カウンセリング予約」：短い説明と、案内ページ・事前シート・オンライン予約のボタンを返す
+// 「カウンセリング予約」：案内ページの「ご予約までの流れ」（#flow）へ直接案内する。
+// そこで ①事前カウンセリングシートを入力 → ②オンライン・対面の予約ボタン の順に進んでもらう。
+const COUNSELING_FLOW_URL = COUNSELING_GUIDE_URL + '#flow';
 function counselingReply() {
   const text =
-    'カウンセリングの料金・受け方・ご予約方法は、案内ページにまとめています。\n' +
-    'ご予約の前に、事前カウンセリングシート（入力必須）をご入力ください。\n' +
-    COUNSELING_GUIDE_URL;
+    'カウンセリングのご予約は、案内ページの「ご予約までの流れ」から、\n' +
+    '① 事前カウンセリングシート（入力必須・3分ほど）の入力\n' +
+    '② オンライン・対面のご予約\n' +
+    'の順にお進みください。';
   const template = {
     type: 'template',
-    altText: `カウンセリングのご案内：${COUNSELING_GUIDE_URL} ／ 事前カウンセリングシート（入力必須）：${COUNSELING_SURVEY_URL}`,
+    altText: `カウンセリングのご予約までの流れ：${COUNSELING_FLOW_URL}`,
     template: {
-      type: 'buttons', title: 'カウンセリングのご予約', text: '① 案内を見る ② シートを入力 ③ ご予約',
-      actions: [
-        { type: 'uri', label: 'ご案内・料金を見る', uri: COUNSELING_GUIDE_URL },
-        { type: 'uri', label: '事前シートを入力（必須）', uri: COUNSELING_SURVEY_URL },
-        { type: 'uri', label: 'オンラインの予約', uri: COUNSELING_ONLINE_BOOKING_URL },
-        { type: 'uri', label: '対面の予約', uri: COUNSELING_FACE_URL || COUNSELING_GUIDE_URL },
-      ],
+      type: 'buttons', title: 'カウンセリングのご予約', text: '① シートを入力 ② ご予約',
+      actions: [{ type: 'uri', label: 'ご予約までの流れへ進む', uri: COUNSELING_FLOW_URL }],
     },
   };
   return { type: 'counseling', text, messages: [{ type: 'text', text }, template] };
